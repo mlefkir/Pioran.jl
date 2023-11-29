@@ -16,7 +16,7 @@ function calculate_psd(f, psd::SimpleBendingPowerLaw)
 end
 
 
-function get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points)
+function get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points::AbstractVector{<:Real})
     psd_zero = calculate_psd(spectral_points[1], psd_model)
     # create the normalised psd
     psd_normalised = calculate_psd.(spectral_points, Ref(psd_model)) / psd_zero
@@ -24,13 +24,13 @@ function get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points)
 end
 
 
-function build_approx(J, f0, fM)
+function build_approx(J::Int64, f0::Real, fM::Real)
     spectral_points = zeros(J)
     spectral_matrix = zeros(J, J)
     return init_psd_decomp(spectral_points, spectral_matrix, J, f0, fM)
 end
 
-function init_psd_decomp(spectral_points, spectral_matrix, J, f0, fM)
+function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real}, J::Int64, f0::Real, fM::Real)
     """
     Initialise the spectral points and the spectral matrix
     """
@@ -49,7 +49,7 @@ function init_psd_decomp(spectral_points, spectral_matrix, J, f0, fM)
     return spectral_points, spectral_matrix
 end
 
-function psd_decomp(psd_normalised, spectral_matrix)
+function psd_decomp(psd_normalised::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real})
     """
     Decompose the psd into the components
     """

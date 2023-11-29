@@ -11,10 +11,10 @@ Construct a simple harmonic oscillator covariance function with parameters σ, �
 Where σ is the amplitude, ω₀ is the angular frequency and Q is the quality factor.
 
 """
-struct SHO{T<:Real} <: SemiSeparable
-    σ::T
-    ω₀::T
-    Q::T
+struct SHO <: SemiSeparable
+    σ
+    ω₀
+    Q
 end
 
 """ Define the kernel functions for the SHO model """
