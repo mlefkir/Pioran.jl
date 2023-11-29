@@ -3,6 +3,13 @@ uuid = "58cf54c2-5899-443a-99a6-60958a74ec4a"
 authors = ["Mehdy Lefkir"]
 version = "1.0.0-DEV"
 
+[deps]
+AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
+Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+KernelFunctions = "ec8451be-7e33-11e9-00cf-bbf324bd1392"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
 [compat]
 julia = "1"
 
