@@ -1,5 +1,3 @@
-using LinearAlgebra
-using KernelFunctions
 
 function log_likelihood_direct(cov::KernelFunctions.SimpleKernel, t::Vector, y::Vector, σ²::Vector)
 

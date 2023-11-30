@@ -1,8 +1,5 @@
-using AbstractGPs
-using LinearAlgebra
-using Distributions
-using Random
-include("celerite_solver.jl")
+
+# include("celerite_solver.jl")
 
 
 struct ScalableGP{Typef<:GP{<:AbstractGPs.ConstMean},Tk<:SumOfSemiSeparable} <: AbstractGPs.AbstractGP

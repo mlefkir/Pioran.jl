@@ -1,11 +1,21 @@
 module Pioran
+    using Random
+    using LinearAlgebra
+    using KernelFunctions
+    using Distances
+    using AbstractGPs
+    using LinearAlgebra
+    using Distributions
+    using Random
+    using Turing
 
-export SHO, ScalableGP,SimpleBendingPowerLaw,approx,log_likelihood#,SemiSeparable,SumOfSemiSeparable
+export SHO, ScalableGP, SimpleBendingPowerLaw, approx, log_likelihood#,SemiSeparable,SumOfSemiSeparable
 include("acvf.jl")
 include("SHO.jl")
 include("psd.jl")
-include("scalable_GP.jl")
+include("celerite_solver.jl")
 include("direct_solver.jl")
+include("scalable_GP.jl")
 # Write your package code here.
 
 end

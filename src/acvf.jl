@@ -1,9 +1,5 @@
 """ Covariance functions for Gaussian processes."""
 
-using KernelFunctions
-using Distances
-
-
 """
     SemiSeparable
 
