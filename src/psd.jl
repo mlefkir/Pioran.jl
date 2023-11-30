@@ -58,7 +58,7 @@ function psd_decomp(psd_normalised::AbstractVector{<:Real}, spectral_matrix::Abs
     return amplitudes
 end
 
-function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64=20, var::Real=1.0)
+function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64=20, var::Real=1.0, basis_function::String="SHO")
 
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM)
 
@@ -70,9 +70,11 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
     end
     variance = sum(amplitudes)
 
-    covariance = SHO(var * amplitudes[1] / variance, 2π * spectral_points[1], 1 / √2)
-    for i in 2:n_components
-        covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
+    if basis_function == "SHO"
+        covariance = SHO(var * amplitudes[1] / variance, 2π * spectral_points[1], 1 / √2)
+        for i in 2:n_components
+            covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
+        end
     end
     return covariance
 end
