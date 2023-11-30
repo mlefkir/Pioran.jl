@@ -1,3 +1,4 @@
+using Random
 using Pioran: SumOfSemiSeparable
 
 """
@@ -136,6 +137,49 @@ function solve_prec(y::Vector, U::Matrix, W::Matrix, D::Vector, ϕ::Matrix)
     return z, logdetD
 end
 
+
+function simulate(rng::AbstractRNG,cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
+    """
+    simulate(cov::SumOfSemiSeparable, τ::Vector, σ2::Vector)
+
+    Simulate a GP with the covariance function cov at the points τ with the variances σ2.
+    """
+    N::Int64 = length(τ)
+
+    q = randn(rng, N)
+    # initialise the matrices and vectors
+    a::Vector, b::Vector, c::Vector, d::Vector = cov.a::Vector, cov.b::Vector, cov.c::Vector, cov.d::Vector
+    T = eltype(a)
+    # number of terms
+    J::Int64 = length(a)
+    # number of rows in U and V, twice the number of terms
+    R::Int64 = 2 * J
+
+    S_n = zeros(T, R, R)
+    ϕ = zeros(T, R, N - 1)
+    U = zeros(T, R, N)
+    V = zeros(T, R, N)
+    D::Vector = zeros(T, N)::Union{Vector,Matrix{Float64}}
+
+    init_semi_separable!(J::Int64, a::Vector, b::Vector, c::Vector, d::Vector, τ, σ2, V, D::Vector, U, ϕ, S_n)
+
+    y_sim = zeros(N)
+    y_sim[1] = sqrt(D[1]) * q[1]
+    f = zeros(N, R)
+
+    for n in 2:N
+        for j in 1:R
+            f[n, j] = ϕ[j, n-1] * (f[n-1, j] + V[j, n-1] * sqrt(D[n-1]) * q[n-1])
+            y_sim[n] += U[j, n] * f[n, j]
+        end
+        y_sim[n] += sqrt(D[n]) * q[n]
+    end
+
+    return y_sim
+end
+
+simulate(cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector) = simulate(Random.GLOBAL_RNG,cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
+
 """
 
 Compute the log-likelihood of the data y given the covariance function cov
@@ -152,13 +196,13 @@ function log_likelihood(cov::SumOfSemiSeparable, τ::Vector, y::Vector, σ2::Vec
     # number of rows in U and V, twice the number of terms
     R::Int64 = 2 * J
 
-    S_n::Union{Array{Float64,3},Matrix} = zeros(T, R, R)::Union{Array{Float64,3},Matrix}
-    ϕ::Union{Array{Float64,3},Matrix} = zeros(T, R, N - 1)::Union{Array{Float64,3},Matrix}
-    U::Union{Array{Float64,3},Matrix} = zeros(T, R, N)::Union{Array{Float64,3},Matrix}
-    V::Union{Array{Float64,3},Matrix} = zeros(T, R, N)::Union{Array{Float64,3},Matrix}
+    S_n = zeros(T, R, R)
+    ϕ = zeros(T, R, N - 1)
+    U = zeros(T, R, N)
+    V = zeros(T, R, N)
     D::Vector = zeros(T, N)::Union{Vector,Matrix{Float64}}
 
-    init_semi_separable!(J::Int64, a::Vector, b::Vector, c::Vector, d::Vector, τ, σ2, V::Union{Array{Float64,3},Matrix}, D::Vector, U::Union{Array{Float64,3},Matrix}, ϕ::Union{Array{Float64,3},Matrix}, S_n::Union{Array{Float64,3},Matrix})
+    init_semi_separable!(J::Int64, a::Vector, b::Vector, c::Vector, d::Vector, τ, σ2, V, D::Vector, U, ϕ, S_n)
 
     z::Union{Vector,Matrix{Float64}}, logdetD::Any = solve_prec(y, U, V, D, ϕ)
     # println("logdetD = ", logdetD)
