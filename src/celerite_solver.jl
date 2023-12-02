@@ -102,8 +102,10 @@ function solve_prec(y::Vector, U::Matrix, W::Matrix, D::Vector, ϕ::Matrix)
     R = size(U, 1)
     zp = zeros(T, N)
     z = zeros(T, N)
-    f = zeros(T, R, N)
-    g = zeros(T, R, N)
+    f = zeros(T, R)
+    fp = zeros(T, R)
+    g = zeros(T, R)
+    gp = zeros(T, R)
     logdetD = log.(D[1])
     # because ϕ[j,1] = 0
     zp[1] = y[1]
@@ -114,9 +116,10 @@ function solve_prec(y::Vector, U::Matrix, W::Matrix, D::Vector, ϕ::Matrix)
         s = 0.0
         z_p = zp[n-1]
         for j in 1:R
-            f[j, n] = (f[j, n-1] + W[j, n-1] * z_p) * ϕ[j, n-1]
-            s += U[j, n] * f[j, n]
+            f[j] = (gp[j] + W[j, n-1] * z_p) * ϕ[j, n-1]
+            s += U[j, n] * f[j]
         end
+        gp = f
         logdetD += log(abs(D[n]))
         zp[n] = y[n] - s
     end
@@ -127,9 +130,10 @@ function solve_prec(y::Vector, U::Matrix, W::Matrix, D::Vector, ϕ::Matrix)
         s = 0.0
         zn = z[n+1]
         for j in 1:R
-            g[j, n] = (g[j, n+1] + U[j, n+1] * zn) * ϕ[j, n]
-            s += W[j, n] * g[j, n]
+            g[j] = (fp[j] + U[j, n+1] * zn) * ϕ[j, n]
+            s += W[j, n] * g[j]
         end
+        fp = g
         z[n] = zp[n] / D[n] - s
     end
 
