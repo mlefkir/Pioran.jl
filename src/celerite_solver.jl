@@ -150,6 +150,8 @@ function simulate(rng::AbstractRNG,cov::SumOfSemiSeparable, τ::AbstractVector, 
     N::Int64 = length(τ)
 
     q = randn(rng, N)
+
+
     # initialise the matrices and vectors
     a::Vector, b::Vector, c::Vector, d::Vector = cov.a::Vector, cov.b::Vector, cov.c::Vector, cov.d::Vector
     T = eltype(a)
@@ -168,13 +170,15 @@ function simulate(rng::AbstractRNG,cov::SumOfSemiSeparable, τ::AbstractVector, 
 
     y_sim = zeros(N)
     y_sim[1] = sqrt(D[1]) * q[1]
-    f = zeros(N, R)
+    f = zeros(R)
+    g = zeros(R);
 
     for n in 2:N
         for j in 1:R
-            f[n, j] = ϕ[j, n-1] * (f[n-1, j] + V[j, n-1] * sqrt(D[n-1]) * q[n-1])
-            y_sim[n] += U[j, n] * f[n, j]
+            f[j] = ϕ[j, n-1] * (g[j] + V[j, n-1] * sqrt(D[n-1]) * q[n-1])
+            y_sim[n] += U[j, n] * f[j]
         end
+        g = f
         y_sim[n] += sqrt(D[n]) * q[n]
     end
 
