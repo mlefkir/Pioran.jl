@@ -9,7 +9,7 @@ module Pioran
     using Random
     using Turing
 
-export SHO, ScalableGP, SimpleBendingPowerLaw, approx, log_likelihood#,SemiSeparable,SumOfSemiSeparable
+export SHO, ScalableGP, SimpleBendingPowerLaw,DoubleBendingPowerLaw, approx, log_likelihood#,SemiSeparable,SumOfSemiSeparable
 include("acvf.jl")
 include("SHO.jl")
 include("psd.jl")
