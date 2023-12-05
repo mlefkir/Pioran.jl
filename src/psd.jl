@@ -11,6 +11,19 @@ struct SimpleBendingPowerLaw{T<:Real} <: BendingPowerLaw
     α_2::T
 end
 
+struct DoubleBendingPowerLaw{T<:Real} <: BendingPowerLaw
+    α_1::T
+    f_b_1::T
+    α_2::T
+    f_b_2::T
+    α_3::T
+end
+
+function calculate_psd(f, psd::DoubleBendingPowerLaw)
+    return (f / psd.f_b_1)^(psd.α_1) / (1 + (f / psd.f_b_1)^(psd.α_1 - psd.α_2)) / (1 + (f / psd.f_b_2)^(psd.α_2 - psd.α_3))
+
+end
+
 function calculate_psd(f, psd::SimpleBendingPowerLaw)
     return (f / psd.f_b)^(psd.α_1) / (1 + (f / psd.f_b)^(psd.α_1 - psd.α_2))
 end
