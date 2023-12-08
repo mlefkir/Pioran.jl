@@ -16,7 +16,7 @@ n_components = [10, 20, 25, 30, 40, 50]
 
 
 # load data
-A = readdlm("benchmark/simulate_long.txt")
+A = readdlm("simulate_long.txt")
 t, y, yerr = collect.(eachcol(A))
 
 # parameter values

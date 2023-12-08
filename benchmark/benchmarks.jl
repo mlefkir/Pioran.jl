@@ -35,3 +35,5 @@ SUITE["likelihood_gp"] = @benchmarkable logpdf(f(t, σ²), y)
 SUITE["likelihood_direct"] = @benchmarkable -Pioran.log_likelihood_direct(𝓡, t, y .- μ, σ²)
 
 tune!(SUITE)
+
+# results = run(SUITE, verbose=true, seconds=1)

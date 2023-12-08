@@ -71,6 +71,36 @@ function psd_decomp(psd_normalised::AbstractVector{<:Real}, spectral_matrix::Abs
     return amplitudes
 end
 
+
+"""
+Approximate the PSD with a sum of SHO functions
+This is essentially to check that the model and the approximation are consistent.
+
+    f: frequency vector
+    psd_model: the model of the PSD
+    f0: the lowest frequency
+    fM: the highest frequency
+    n_components: the number of components to use
+    var: the variance of the process
+    basis_function: the basis function to use
+
+    
+"""
+function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64=20, var::Real=1.0, basis_function::String="SHO")
+    spectral_points, spectral_matrix = build_approx(n_components, f0, fM)
+
+    psd_normalised = get_normalised_psd(psd_model, spectral_points)
+    amplitudes = psd_decomp(psd_normalised, spectral_matrix)
+
+    psd = zeros(length(f))
+    if basis_function == "SHO"
+        for i in 1:n_components
+            psd += amplitudes[i]*var  ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
+        end
+    end
+    return psd
+end
+
 function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64=20, var::Real=1.0, basis_function::String="SHO")
 
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM)
