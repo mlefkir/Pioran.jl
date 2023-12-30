@@ -43,7 +43,7 @@ function build_approx(J::Int64, f0::Real, fM::Real)
     return init_psd_decomp(spectral_points, spectral_matrix, J, f0, fM)
 end
 
-function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real}, J::Int64, f0::Real, fM::Real)
+function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real}, J::Int64, f0::Real, fM::Real, basis_function::String="SHO")
     """
     Initialise the spectral points and the spectral matrix
     """
@@ -54,10 +54,20 @@ function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matri
     end
 
     # fill the spectral matrix
-    for j in 1:J
-        for k in 1:J
-            spectral_matrix[j, k] = 1 / (1 + (spectral_points[j] / spectral_points[k])^4)
+    if basis_function == "SHO"
+        for j in 1:J
+            for k in 1:J
+                spectral_matrix[j, k] = 1 / (1 + (spectral_points[j] / spectral_points[k])^4)
+            end
         end
+    elseif basis_function == "DRWSHO"
+        for j in 1:J
+            for k in 1:J
+                spectral_matrix[j, k] = 1 / (1 + (spectral_points[j] / spectral_points[k])^6)
+            end
+        end
+    else
+        error("Basis function" * basis_function * "not implemented")
     end
     return spectral_points, spectral_matrix
 end
@@ -95,9 +105,16 @@ function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real
     psd = zeros(length(f))
     if basis_function == "SHO"
         for i in 1:n_components
-            psd += amplitudes[i]*var  ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
+            psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
         end
+    elseif basis_function == "DRWSHO"
+        for i in 1:n_components
+            psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
+        end
+    else
+        error("Basis function" * basis_function * "not implemented")
     end
+
     return psd
 end
 
@@ -118,6 +135,14 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
         for i in 2:n_components
             covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
         end
+        # else if basis_function == "DRWSHO"
+        #     covariance = SHO(var * amplitudes[1] / variance, 2π * spectral_points[1], 1 / √2)
+        #     for i in 2:n_components
+        #         covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
+        #     end
+    else
+        error("Basis function" * basis_function * "not implemented")
     end
+
     return covariance
 end

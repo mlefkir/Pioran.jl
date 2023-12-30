@@ -2,7 +2,7 @@ using CairoMakie
 using VectorizedStatistics
 
 """ Plot the boxplot of the residuals and ratios for the PSD approximation """
-function plot_boxplot_psd_approx(residuals, ratios,path="")
+function plot_boxplot_psd_approx(residuals, ratios, path="")
 
     meta_mean = vec(vmean(residuals, dims=1))
     meta_median = vec(vmedian(residuals, dims=1))
@@ -25,7 +25,7 @@ function plot_boxplot_psd_approx(residuals, ratios,path="")
     CairoMakie.boxplot!(ax1, x, y)
     CairoMakie.boxplot!(ax2, x, y2, show_outliers=true)
 
-    save(path*"boxplot_psd_approx.pdf", fig)
+    save(path * "boxplot_psd_approx.pdf", fig)
 end
 
 """ Plot the quantiles of the residuals and ratios of the PSD """
@@ -83,7 +83,8 @@ Args:
     model (SimpleBendingPowerLaw): The model
 
 """
-function sample_approx_model(prior_samples, variance_samples, f0, fM, model)
+function sample_approx_model(prior_samples, variance_samples, f0, fM, model,basis_function="SHO")
+    P = size(prior_samples, 2)
     f = collect(10 .^ range(log10(f0), log10(fM), 1000))
 
     psd = [Pioran.calculate_psd.(f, Ref(model(prior_samples[:, k]...))) for k in 1:P]
@@ -91,7 +92,7 @@ function sample_approx_model(prior_samples, variance_samples, f0, fM, model)
     psd ./= psd[1, :]'
     psd .*= variance_samples'
 
-    psd_approx = [Pioran.approximated_psd(f, model(prior_samples[:, k]...), f0, fM, var=variance_samples[k],) for k in 1:P]
+    psd_approx = [Pioran.approximated_psd(f, model(prior_samples[:, k]...), f0, fM, var=variance_samples[k],basis_function=basis_function) for k in 1:P]
     psd_approx = mapreduce(permutedims, vcat, psd_approx)'
 
     residuals = psd .- psd_approx
@@ -103,4 +104,9 @@ function plot_diag(f, residuals, ratios, f_min, f_max)
     plot_mean_approx(f, residuals, ratios)
     plot_quantiles_approx(f, f_min, f_max, residuals, ratios)
     plot_boxplot_psd_approx(residuals, ratios)
+end
+
+function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max)
+    _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model)
+    plot_diag(f, residuals, ratios, f_min, f_max)
 end
