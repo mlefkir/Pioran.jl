@@ -2,8 +2,11 @@ using CairoMakie
 using VectorizedStatistics
 
 """ Plot the boxplot of the residuals and ratios for the PSD approximation """
-function plot_boxplot_psd_approx(residuals, ratios, path="")
+function plot_boxplot_psd_approx(residuals, ratios; path="")
 
+    if ! ispath(path)
+        mkpath(path)
+    end
     meta_mean = vec(vmean(residuals, dims=1))
     meta_median = vec(vmedian(residuals, dims=1))
     meta_max = vec(maximum(abs.(residuals), dims=1))
@@ -28,9 +31,16 @@ function plot_boxplot_psd_approx(residuals, ratios, path="")
     save(path * "boxplot_psd_approx.pdf", fig)
 end
 
-""" Plot the quantiles of the residuals and ratios of the PSD """
-function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
+"""
+    plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
+    
+Plot the quantiles of the residuals and ratios (with respect to the approximated PSD) of the PSD 
 
+"""
+function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
+    if ! ispath(path)
+        mkpath(path)
+    end
     res_quantiles = vquantile!.(Ref(residuals), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
     rat_quantiles = vquantile!.(Ref(ratios), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
 
@@ -58,8 +68,11 @@ function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
     save(path * "quantiles_psd_approx.pdf", fig)
 end
 
-""" Plot the mean of the residuals and ratios """
-function plot_mean_approx(f, residuals, ratios, path="")
+""" Plot the frequency-averaged residuals and ratios """
+function plot_mean_approx(f, residuals, ratios; path="")
+    if ! ispath(path)
+        mkpath(path)
+    end
     mean_res = vec(mean(residuals, dims=2))
     mean_rat = vec(mean(ratios, dims=2))
 
@@ -76,23 +89,23 @@ end
 """ Check the approximation of the PSD 
 
 Args:
-    prior_samples (Array{Float64, N}): The prior samples of the model parameters
+    samples (Array{Float64, N}): The samples of the model parameters
     variance_samples (Array{Float64, 1}): The variance samples
     f0 (Float64): The minimum frequency
     fM (Float64): The maximum frequency
     model (SimpleBendingPowerLaw): The model
 
 """
-function sample_approx_model(prior_samples, variance_samples, f0, fM, model,basis_function="SHO")
-    P = size(prior_samples, 2)
+function sample_approx_model(samples, variance_samples, f0, fM, model, basis_function="SHO")
+    P = size(samples, 2)
     f = collect(10 .^ range(log10(f0), log10(fM), 1000))
 
-    psd = [Pioran.calculate_psd.(f, Ref(model(prior_samples[:, k]...))) for k in 1:P]
+    psd = [Pioran.calculate_psd.(f, Ref(model(samples[:, k]...))) for k in 1:P]
     psd = mapreduce(permutedims, vcat, psd)'
     psd ./= psd[1, :]'
     psd .*= variance_samples'
 
-    psd_approx = [Pioran.approximated_psd(f, model(prior_samples[:, k]...), f0, fM, var=variance_samples[k],basis_function=basis_function) for k in 1:P]
+    psd_approx = [Pioran.approximated_psd(f, model(samples[:, k]...), f0, fM, var=variance_samples[k], basis_function=basis_function) for k in 1:P]
     psd_approx = mapreduce(permutedims, vcat, psd_approx)'
 
     residuals = psd .- psd_approx
@@ -100,13 +113,50 @@ function sample_approx_model(prior_samples, variance_samples, f0, fM, model,basi
     return psd, psd_approx, residuals, ratios, f
 end
 
-function plot_diag(f, residuals, ratios, f_min, f_max)
-    plot_mean_approx(f, residuals, ratios)
-    plot_quantiles_approx(f, f_min, f_max, residuals, ratios)
-    plot_boxplot_psd_approx(residuals, ratios)
+function plot_diag(f, residuals, ratios, f_min, f_max; path="")
+    plot_mean_approx(f, residuals, ratios, path=path)
+    plot_quantiles_approx(f, f_min, f_max, residuals, ratios, path=path)
+    plot_boxplot_psd_approx(residuals, ratios, path=path)
 end
 
-function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max)
+function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="")
     _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model)
-    plot_diag(f, residuals, ratios, f_min, f_max)
+    plot_diag(f, residuals, ratios, f_min, f_max, path=path)
+end
+
+
+"""
+    psd_ppc(samples, variance_samples, f0, fM, model; path="")
+
+Plot the posterior predictive power spectral density
+    
+    """
+function psd_ppc(samples, variance_samples, f0, fM, model; path="")
+    if !ispath(path)
+        mkpath(path)
+    end
+    psd, psd_approx, _, _, f = sample_approx_model(samples, variance_samples, f0, fM, model)
+
+    psd_quantiles = vquantile!.(Ref(psd), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+    psd_approx_quantiles = vquantile!.(Ref(psd_approx), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+
+    fig = Figure(size=(800, 600))
+    ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="PSD",
+        xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
+
+    lines!(ax1, f, vec(psd_quantiles[3]), label="Model Median", color=:blue)
+    band!(ax1, f, vec(psd_quantiles[1]), vec(psd_quantiles[5]), color=(:blue, 0.2), label="95%")
+    band!(ax1, f, vec(psd_quantiles[2]), vec(psd_quantiles[4]), color=(:blue, 0.4), label="68%")
+
+    lines!(ax1, f, vec(psd_approx_quantiles[3]), label="Approx Median", color=:red)
+    band!(ax1, f, vec(psd_approx_quantiles[1]), vec(psd_approx_quantiles[5]), color=(:red, 0.2), label="95%")
+    band!(ax1, f, vec(psd_approx_quantiles[2]), vec(psd_approx_quantiles[4]), color=(:red, 0.4), label="68%")
+    fig[2, 1] = Legend(fig, ax1, orientation=:horizontal,
+        tellwidth=false,
+        tellheight=true,
+        halign=:center, valign=:bottom,
+        fontsize=10, nbanks=3,
+        framevisible=false)
+    save(path * "psd_ppc.pdf", fig)
+
 end
