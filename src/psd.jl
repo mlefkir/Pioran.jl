@@ -50,13 +50,13 @@ function get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points::Ab
 end
 
 
-function build_approx(J::Int64, f0::Real, fM::Real)
+function build_approx(J::Int64, f0::Real, fM::Real; basis_function::String="SHO")
     spectral_points = zeros(J)
     spectral_matrix = zeros(J, J)
-    return init_psd_decomp(spectral_points, spectral_matrix, J, f0, fM)
+    return init_psd_decomp(spectral_points, spectral_matrix, J, f0, fM, basis_function=basis_function)
 end
 
-function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real}, J::Int64, f0::Real, fM::Real, basis_function::String="SHO")
+function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real}, J::Int64, f0::Real, fM::Real; basis_function::String="SHO")
     """
     Initialise the spectral points and the spectral matrix
     """
@@ -93,8 +93,13 @@ function psd_decomp(psd_normalised::AbstractVector{<:Real}, spectral_matrix::Abs
     amplitudes = spectral_matrix \ psd_normalised
     return amplitudes
 end
+function get_approx_coefficients(psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64=20, basis_function::String="SHO")
+    spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function=basis_function)
 
-
+    psd_normalised = get_normalised_psd(psd_model, spectral_points)
+    amplitudes = psd_decomp(psd_normalised, spectral_matrix)
+    return amplitudes
+end
 """
 Approximate the PSD with a sum of SHO functions
 This is essentially to check that the model and the approximation are consistent.
@@ -131,9 +136,21 @@ function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real
     return psd
 end
 
-function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64=20, var::Real=1.0, basis_function::String="SHO")
+""" approx(psd_model, f0, fM, n_components=20, var=1.0; basis_function="SHO")
 
-    spectral_points, spectral_matrix = build_approx(n_components, f0, fM)
+Approximate the PSD with a sum of SHO functions
+
+    psd_model: the model for the power spectral density
+    f0: the lowest frequency
+    fM: the highest frequency
+    n_components: the number of components to use
+    var: the variance of the process
+    basis_function: the basis function to use
+
+"""
+function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64=20, var::Real=1.0; basis_function::String="SHO")
+
+    spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function=basis_function)
 
     psd_normalised = get_normalised_psd(psd_model, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)

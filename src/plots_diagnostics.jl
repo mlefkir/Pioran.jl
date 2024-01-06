@@ -1,10 +1,13 @@
 using CairoMakie
 using VectorizedStatistics
 
+theme = Pioran.get_theme()
+set_theme!(theme)
+
 """ Plot the boxplot of the residuals and ratios for the PSD approximation """
 function plot_boxplot_psd_approx(residuals, ratios; path="")
 
-    if ! ispath(path)
+    if !ispath(path)
         mkpath(path)
     end
     meta_mean = vec(vmean(residuals, dims=1))
@@ -38,7 +41,7 @@ Plot the quantiles of the residuals and ratios (with respect to the approximated
 
 """
 function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
-    if ! ispath(path)
+    if !ispath(path)
         mkpath(path)
     end
     res_quantiles = vquantile!.(Ref(residuals), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
@@ -70,7 +73,7 @@ end
 
 """ Plot the frequency-averaged residuals and ratios """
 function plot_mean_approx(f, residuals, ratios; path="")
-    if ! ispath(path)
+    if !ispath(path)
         mkpath(path)
     end
     mean_res = vec(mean(residuals, dims=2))
@@ -96,9 +99,9 @@ Args:
     model (SimpleBendingPowerLaw): The model
 
 """
-function sample_approx_model(samples, variance_samples, f0, fM, model, basis_function="SHO")
+function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequencies=1_000, basis_function="SHO")
     P = size(samples, 2)
-    f = collect(10 .^ range(log10(f0), log10(fM), 1000))
+    f = collect(10 .^ range(log10(f0), log10(fM), n_frequencies))
 
     psd = [Pioran.calculate_psd.(f, Ref(model(samples[:, k]...))) for k in 1:P]
     psd = mapreduce(permutedims, vcat, psd)'
@@ -126,19 +129,31 @@ end
 
 
 """
-    psd_ppc(samples, variance_samples, f0, fM, model; path="")
+plot_psd_ppc(samples, variance_samples, f0, fM, model; path="")
 
 Plot the posterior predictive power spectral density
     
     """
-function psd_ppc(samples, variance_samples, f0, fM, model; path="")
+function plot_psd_ppc(samples, variance_samples, f0, fM, model; n_frequencies=1000, path="")
+    theme = Pioran.get_theme()
+    set_theme!(theme)
+
     if !ispath(path)
         mkpath(path)
     end
-    psd, psd_approx, _, _, f = sample_approx_model(samples, variance_samples, f0, fM, model)
+    P = size(variance_samples, 1)
+    spectral_points, _ = Pioran.build_approx(20, f0, fM)
 
-    psd_quantiles = vquantile!.(Ref(psd), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
-    psd_approx_quantiles = vquantile!.(Ref(psd_approx), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+    psd, psd_approx, _, _, f = sample_approx_model(samples, variance_samples, f0, fM, model, n_frequencies=n_frequencies)
+
+    amplitudes = [Pioran.get_approx_coefficients.(Ref(model(samples[:, k]...)), f0, fM) for k in 1:P]
+    amplitudes = mapreduce(permutedims, vcat, amplitudes)'
+
+    psd_m = psd ./ sum(amplitudes .* spectral_points, dims=1)
+    psd_approx_m = psd_approx ./ sum(amplitudes .* spectral_points, dims=1)
+
+    psd_quantiles = vquantile!.(Ref(psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+    psd_approx_quantiles = vquantile!.(Ref(psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
 
     fig = Figure(size=(800, 600))
     ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="PSD",
@@ -157,6 +172,12 @@ function psd_ppc(samples, variance_samples, f0, fM, model; path="")
         halign=:center, valign=:bottom,
         fontsize=10, nbanks=3,
         framevisible=false)
-    save(path * "psd_ppc.pdf", fig)
 
+    a = vcat([f', psd_quantiles..., psd_approx_quantiles...])
+    
+    open(path * "ppc_data.txt"; write=true) do f
+        write(f, "# Posterior predictive power spectral density\n# quantiles=[0.025, 0.16, 0.5, 0.84, 0.975] \n# f, psd_quantiles, psd_approx_quantiles\n")
+        writedlm(f, a)
+    end
+    save(path * "psd_ppc.pdf", fig)
 end
