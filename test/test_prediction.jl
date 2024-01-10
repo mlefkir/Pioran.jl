@@ -14,7 +14,7 @@ f0 = 1 / (t[end] - t[1]) / 100;
 fM = 1 / minimum(diff(t)) / 2 * 20;
 min_f_b = f0 * 10
 max_f_b = fM / 10
-α₁, f₁, α₂ = -0.82, 0.01, -3.3
+α₁, f₁, α₂ = 0.82, 0.01, 3.3
 ν = 1.0
 μ = 0.0# mean(y)
 variance = var(y, corrected=true)

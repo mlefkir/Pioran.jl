@@ -21,7 +21,7 @@ t, y, yerr = collect.(eachcol(A))
 
 # parameter values
 ν = 1.0
-α₁, f₁, α₂ = -0.82, 0.01, -3.3
+α₁, f₁, α₂ = 0.82, 0.01, 3.3
 c = 1e-5
 variance = var(y, corrected=true)
 μ = mean(y)

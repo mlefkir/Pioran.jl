@@ -4,11 +4,7 @@ struct ScalableGP{Typef<:GP{<:AbstractGPs.ConstMean},Tk<:SumOfSemiSeparable} <: 
     kernel::Tk
 end
 
-
 # const FinitePosteriorGP = AbstractGPs.FiniteGP{<:ScalableGP}
-
-
-
 # function _predict_mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
 #     K = fp.f.kernel
 #     x = fp.f.f.x
@@ -19,8 +15,6 @@ end
 
 # AbstractGPs.mean(f::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = _predict_mean(f, τ)
 # AbstractGPs.mean(f::PosteriorGP) = _predict_mean(f, f.f.f.x)
-
-
 
 ScalableGP(f::GP) = ScalableGP(f, f.kernel)
 ScalableGP(kernel::SumOfSemiSeparable) = ScalableGP(GP(0.0, kernel), kernel)

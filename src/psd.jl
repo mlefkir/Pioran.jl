@@ -6,17 +6,17 @@ abstract type PowerSpectralDensity <: Model end
 abstract type BendingPowerLaw <: PowerSpectralDensity end
 
 struct SimpleBendingPowerLaw{T<:Real} <: BendingPowerLaw
-    α_1::T
-    f_b::T
-    α_2::T
+    α₁::T
+    f₁::T
+    α₂::T
 end
 
 struct DoubleBendingPowerLaw{T<:Real} <: BendingPowerLaw
-    α_1::T
-    f_b_1::T
-    α_2::T
-    f_b_2::T
-    α_3::T
+    α₁::T
+    f₁::T
+    α₂::T
+    Δf::T
+    α₃::T
 end
 
 struct DoubleBendingPowerLaw_Bis{T<:Real} <: BendingPowerLaw
@@ -33,12 +33,12 @@ function calculate_psd(f, psd::DoubleBendingPowerLaw_Bis)
 end
 
 function calculate_psd(f, psd::DoubleBendingPowerLaw)
-    return (f / psd.f_b_1)^(psd.α_1) / (1 + (f / psd.f_b_1)^(psd.α_1 - psd.α_2)) / (1 + (f / psd.f_b_2)^(psd.α_2 - psd.α_3))
+    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / (psd.f₁ * psd.Δf))^(psd.α₃ - psd.α₂))
 
 end
 
 function calculate_psd(f, psd::SimpleBendingPowerLaw)
-    return (f / psd.f_b)^(psd.α_1) / (1 + (f / psd.f_b)^(psd.α_1 - psd.α_2))
+    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁))
 end
 
 
