@@ -1,5 +1,7 @@
 using CairoMakie
 using VectorizedStatistics
+using LombScargle
+
 
 theme = Pioran.get_theme()
 set_theme!(theme)
@@ -128,12 +130,13 @@ function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, 
 end
 
 
+
 """
 plot_psd_ppc(samples, variance_samples, f0, fM, model; path="")
 
 Plot the posterior predictive power spectral density
     
-    """
+"""
 function plot_psd_ppc(samples, variance_samples, f0, fM, model; n_frequencies=1000, path="")
     theme = Pioran.get_theme()
     set_theme!(theme)
@@ -180,4 +183,103 @@ function plot_psd_ppc(samples, variance_samples, f0, fM, model; n_frequencies=10
         writedlm(f, a)
     end
     save(path * "psd_ppc.pdf", fig)
+end
+
+"""
+    plot_ppc_lsp(samples_𝓟, samples_ν, samples_μ, samples_variance, t, y, yerr, f0, fM, model; n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="")
+
+Plot the posterior predictive Lomb-Scargle periodogram
+
+"""
+function plot_lsp_ppc(samples_𝓟, samples_ν, samples_μ, samples_variance, t, y, yerr, f0, fM, model; n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="")
+    #set theme and create output directory
+    theme = Pioran.get_theme()
+    set_theme!(theme)
+    if !ispath(path)
+        mkpath(path)
+    end
+
+    # get the frequencies
+    freq = exp.(range(log(f0), log(fM), length=n_frequencies))
+
+    Power = []
+    # get the posterior predictive lombscargle periodogram
+    for k in 1:n_samples
+        𝓟 = model(samples_𝓟[k, :]...)
+        𝓡 = approx(𝓟, f0, fM, n_components, samples_variance[k])
+        f = ScalableGP(samples_μ[k], 𝓡)
+        σ2 = yerr .^ 2 * samples_ν[k]
+        fx = f(t, σ2)
+        # draw a time series from the GP
+        y_sim = rand(fx)
+
+        ls = lombscargle(t, y_sim, frequencies=freq)
+        push!(Power, freqpower(ls)[2][1:end-1])
+    end
+
+    ls_array = mapreduce(permutedims, vcat, Power)'
+    ls_quantiles = vquantile!.(Ref(ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+
+    # compute the LSP of the observed data
+    ls_obs = lombscargle(t, y, frequencies=freq)
+    lsp = freqpower(ls_obs)[2][1:end-1]
+    freq_obs = freqpower(ls_obs)[1][1:end-1]
+
+    # bin the LSP in log space
+    binned_periodogram = []
+    binned_freqs = []
+    n = Int(round(length(lsp) / bin_fact, digits=0))
+    println(n)
+    n_start = 0
+    for i in n_start:n-2
+        push!(binned_periodogram, mean(log.(lsp[1+i*bin_fact:(i+1)*bin_fact])))
+        push!(binned_freqs, mean(log.(freq_obs[1+i*bin_fact:(i+1)*bin_fact])))
+    end
+    binned_periodogram = exp.(binned_periodogram)
+    binned_freqs = exp.(binned_freqs)
+
+    # save the data
+    quantiles_fre = vcat([freq[1:end-1]', ls_quantiles...])
+    open(path * "lsp_ppc_data.txt"; write=true) do f
+        write(f, "# Posterior predictive Lomb-Scargle\n# quantiles=[0.025, 0.16, 0.5, 0.84, 0.975] \n# freq, ls_quantiles\n")
+        writedlm(f, quantiles_fre)
+    end
+
+    binned_data = hcat(binned_freqs, binned_periodogram)
+    open(path * "binned_lsp_data.txt"; write=true) do f
+        write(f, "# Binned Lomb-Scargle of the data\n# freq, lsp\n")
+        writedlm(f, binned_data)
+    end
+
+
+    # min and max freqs of the obs data
+    f_min = 1 / (t[end] - t[1])
+    f_max = 1 / minimum(diff(t)) / 2
+
+    # plot the posterior predictive LSP
+    fig = Figure(size=(800, 600))
+    ax1 = Axis(fig[1, 1],
+        xscale=log10,
+        yscale=log10,
+        xlabel=L"Frequency (${d}^{-1}$)",
+        ylabel="PSD",
+        xminorticks=IntervalsBetween(9),
+        yminorticks=IntervalsBetween(9),
+        title="Posterior predictive Lomb-Scargle periodogram")
+    vlines!(ax1, [f_min; f_max], color=:black, linestyle=:dash, label="Observed window")
+
+    lines!(ax1, freq[1:end-1], vec(ls_quantiles[3]), label="LSP realisations", color=:blue)
+    band!(ax1, freq[1:end-1], vec(ls_quantiles[1]), vec(ls_quantiles[5]), color=(:blue, 0.1), label="95%")
+    band!(ax1, freq[1:end-1], vec(ls_quantiles[2]), vec(ls_quantiles[4]), color=(:blue, 0.2), label="68%")
+    lines!(ax1, binned_freqs, binned_periodogram, color=:red, linewidth=2, label="Binned LSP")
+
+    fig[2, 1] = Legend(fig, ax1, orientation=:horizontal,
+        tellwidth=false,
+        tellheight=true,
+        halign=:center, valign=:bottom,
+        fontsize=10, nbanks=2,
+        framevisible=false)
+
+    fig
+    save(path * "LSP_ppc.pdf", fig)
 end
