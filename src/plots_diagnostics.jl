@@ -212,7 +212,6 @@ function plot_lsp_ppc(samples_𝓟, samples_ν, samples_μ, samples_variance, t,
         fx = f(t, σ2)
         # draw a time series from the GP
         y_sim = rand(fx)
-
         ls = lombscargle(t, y_sim, frequencies=freq)
         push!(Power, freqpower(ls)[2][1:end-1])
     end

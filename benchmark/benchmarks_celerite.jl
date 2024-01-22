@@ -35,9 +35,9 @@ variance = var(y, corrected=true)
     max_f_b = fM / 10
 
     # Prior distribution for the parameters
-    α₁ ~ Uniform(-2.0, 0.25)
+    α₁ ~ Uniform(-0.25, 2.)
     f₁ ~ LogUniform(min_f_b, max_f_b)
-    α₂ ~ Uniform(-3.9, -0.5)
+    α₂ ~ Uniform(1.5, 4)
     variance ~ LogNormal(log(0.5), 1.25)
     ν ~ Gamma(2, 0.5)
     μ ~ LogNormal(log(3), 1)
