@@ -4,8 +4,9 @@ using Pioran, Test
 using Distributions
 using Statistics
 using ForwardDiff
+using Random
 
-A = readdlm("data/simu_log.txt")
+A = readdlm("data/simu.txt")
 
 t, y, yerr = collect.(eachcol(A))
 
@@ -36,28 +37,25 @@ end
 
 p = [α₁, f₁, α₂, variance, ν, μ]
 fx = modelling(p, t, y, yerr)
-celerite_gp_like = logpdf(fx, y)
-
-
-function loglike(p)
-    fx = modelling(p, t, y, yerr)
-    return logpdf(fx, y)
-end
-
+𝓡 = fx.f.kernel
 σ² = ν .* yerr .^ 2
 
 
-𝓟 = SimpleBendingPowerLaw(α₁, f₁, α₂)
+fp = posterior(fx, y)
 
-# Approximation of the PSD to form a covariance function
-𝓡 = approx(𝓟, f0, fM, 20, variance)
+τ = collect(range(minimum(t), stop=maximum(t), length=1000))
+τ2 = collect(range(minimum(t)-30, stop=maximum(t)+30, length=1000))
+τr = sort(rand(1000))*(t[end]-t[1])*2 .+(t[1]-t[end]/2)
 
-celerite_like = Pioran.log_likelihood(𝓡, t, y .- μ, σ²)
-direct_like = -Pioran.log_likelihood_direct(𝓡, t, y .- μ, σ²)
-grad = ForwardDiff.gradient(loglike, p)
 
-@testset "likelihood_solv" begin
-    @test celerite_like ≈ celerite_gp_like
-    @test celerite_gp_like ≈ direct_like
-    @test all(isfinite.(grad))
+
+@testset "prediction_mean" begin
+    # test on the same 
+    @test Pioran.predict_direct(𝓡,t,t,y,σ²) ≈ mean(fp)
+    # test on more points
+    @test Pioran.predict_direct(𝓡,τ,t,y,σ²) ≈ mean(fp,τ)
+    # test on more points
+    @test Pioran.predict_direct(𝓡,τ2,t,y,σ²) ≈ mean(fp,τ2)
+    # test on random points
+    @test Pioran.predict_direct(𝓡,τr,t,y,σ²) ≈ mean(fp,τr)   
 end

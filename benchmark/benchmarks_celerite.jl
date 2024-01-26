@@ -16,12 +16,12 @@ n_components = [10, 20, 25, 30, 40, 50]
 
 
 # load data
-A = readdlm("benchmark/simulate_long.txt")
+A = readdlm("simulate_long.txt")
 t, y, yerr = collect.(eachcol(A))
 
 # parameter values
 ν = 1.0
-α₁, f₁, α₂ = -0.82, 0.01, -3.3
+α₁, f₁, α₂ = 0.82, 0.01, 3.3
 c = 1e-5
 variance = var(y, corrected=true)
 μ = mean(y)
@@ -35,9 +35,9 @@ variance = var(y, corrected=true)
     max_f_b = fM / 10
 
     # Prior distribution for the parameters
-    α₁ ~ Uniform(-2.0, 0.25)
+    α₁ ~ Uniform(-0.25, 2.)
     f₁ ~ LogUniform(min_f_b, max_f_b)
-    α₂ ~ Uniform(-3.9, -0.5)
+    α₂ ~ Uniform(1.5, 4)
     variance ~ LogNormal(log(0.5), 1.25)
     ν ~ Gamma(2, 0.5)
     μ ~ LogNormal(log(3), 1)
@@ -71,4 +71,4 @@ for J in n_components
 end
 tune!(SUITE)
 
-# results = run(SUITE, verbose=true, seconds=1)
+#results = run(SUITE, verbose=true, seconds=1)

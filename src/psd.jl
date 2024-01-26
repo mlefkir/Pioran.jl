@@ -6,13 +6,39 @@ abstract type PowerSpectralDensity <: Model end
 abstract type BendingPowerLaw <: PowerSpectralDensity end
 
 struct SimpleBendingPowerLaw{T<:Real} <: BendingPowerLaw
-    α_1::T
-    f_b::T
-    α_2::T
+    α₁::T
+    f₁::T
+    α₂::T
+end
+
+struct DoubleBendingPowerLaw{T<:Real} <: BendingPowerLaw
+    α₁::T
+    f₁::T
+    α₂::T
+    f₂::T
+    α₃::T
+end
+
+struct DoubleBendingPowerLaw_Bis{T<:Real} <: BendingPowerLaw
+    α₀::T
+    f₁::T
+    Δα₁::T
+    Δf::T
+    Δα₂::T
+end
+
+function calculate_psd(f, psd::DoubleBendingPowerLaw_Bis)
+    return (f / psd.f₁)^(-psd.α₀) / (1 + (f / psd.f₁)^(psd.α₀ + psd.Δα₁)) / (1 + (f / (psd.f₁ * psd.Δf))^(psd.Δα₁ + psd.Δα₂))
+
+end
+
+function calculate_psd(f, psd::DoubleBendingPowerLaw)
+    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / (psd.f₂))^(psd.α₃ - psd.α₂))
+
 end
 
 function calculate_psd(f, psd::SimpleBendingPowerLaw)
-    return (f / psd.f_b)^(psd.α_1) / (1 + (f / psd.f_b)^(psd.α_1 - psd.α_2))
+    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁))
 end
 
 
@@ -24,13 +50,13 @@ function get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points::Ab
 end
 
 
-function build_approx(J::Int64, f0::Real, fM::Real)
+function build_approx(J::Int64, f0::Real, fM::Real; basis_function::String="SHO")
     spectral_points = zeros(J)
     spectral_matrix = zeros(J, J)
-    return init_psd_decomp(spectral_points, spectral_matrix, J, f0, fM)
+    return init_psd_decomp(spectral_points, spectral_matrix, J, f0, fM, basis_function=basis_function)
 end
 
-function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real}, J::Int64, f0::Real, fM::Real)
+function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real}, J::Int64, f0::Real, fM::Real; basis_function::String="SHO")
     """
     Initialise the spectral points and the spectral matrix
     """
@@ -41,10 +67,20 @@ function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matri
     end
 
     # fill the spectral matrix
-    for j in 1:J
-        for k in 1:J
-            spectral_matrix[j, k] = 1 / (1 + (spectral_points[j] / spectral_points[k])^4)
+    if basis_function == "SHO"
+        for j in 1:J
+            for k in 1:J
+                spectral_matrix[j, k] = 1 / (1 + (spectral_points[j] / spectral_points[k])^4)
+            end
         end
+    elseif basis_function == "DRWSHO"
+        for j in 1:J
+            for k in 1:J
+                spectral_matrix[j, k] = 1 / (1 + (spectral_points[j] / spectral_points[k])^6)
+            end
+        end
+    else
+        error("Basis function" * basis_function * "not implemented")
     end
     return spectral_points, spectral_matrix
 end
@@ -57,10 +93,64 @@ function psd_decomp(psd_normalised::AbstractVector{<:Real}, spectral_matrix::Abs
     amplitudes = spectral_matrix \ psd_normalised
     return amplitudes
 end
+function get_approx_coefficients(psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64=20, basis_function::String="SHO")
+    spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function=basis_function)
 
-function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64=20, var::Real=1.0, basis_function::String="SHO")
+    psd_normalised = get_normalised_psd(psd_model, spectral_points)
+    amplitudes = psd_decomp(psd_normalised, spectral_matrix)
+    return amplitudes
+end
+"""
+Approximate the PSD with a sum of SHO functions
+This is essentially to check that the model and the approximation are consistent.
 
+    f: frequency vector
+    psd_model: the model of the PSD
+    f0: the lowest frequency
+    fM: the highest frequency
+    n_components: the number of components to use
+    var: the variance of the process
+    basis_function: the basis function to use
+
+    
+"""
+function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64=20, var::Real=1.0, basis_function::String="SHO")
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM)
+
+    psd_normalised = get_normalised_psd(psd_model, spectral_points)
+    amplitudes = psd_decomp(psd_normalised, spectral_matrix)
+
+    psd = zeros(length(f))
+    if basis_function == "SHO"
+        for i in 1:n_components
+            psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
+        end
+    elseif basis_function == "DRWSHO"
+        for i in 1:n_components
+            psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
+        end
+    else
+        error("Basis function" * basis_function * "not implemented")
+    end
+
+    return psd
+end
+
+""" approx(psd_model, f0, fM, n_components=20, var=1.0; basis_function="SHO")
+
+Approximate the PSD with a sum of SHO functions
+
+    psd_model: the model for the power spectral density
+    f0: the lowest frequency
+    fM: the highest frequency
+    n_components: the number of components to use
+    var: the variance of the process
+    basis_function: the basis function to use
+
+"""
+function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64=20, var::Real=1.0; basis_function::String="SHO")
+
+    spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function=basis_function)
 
     psd_normalised = get_normalised_psd(psd_model, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
@@ -75,6 +165,14 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
         for i in 2:n_components
             covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
         end
+        # else if basis_function == "DRWSHO"
+        #     covariance = SHO(var * amplitudes[1] / variance, 2π * spectral_points[1], 1 / √2)
+        #     for i in 2:n_components
+        #         covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
+        #     end
+    else
+        error("Basis function" * basis_function * "not implemented")
     end
+
     return covariance
 end

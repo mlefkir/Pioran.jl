@@ -1,5 +1,3 @@
-using KernelFunctions
-using Distances
 
 using Pioran: SemiSeparable
 """ SHO model """

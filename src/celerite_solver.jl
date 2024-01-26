@@ -1,4 +1,3 @@
-using Random
 using Pioran: SumOfSemiSeparable
 
 """
@@ -8,8 +7,11 @@ U,V are the rank-R matrices, D is the diagonal matrix and ϕ is the matrix of th
 
 See Foreman-Mackey et al. 2017 for more details.
 """
-function init_semi_separable!(J::Int64, a::Vector, b::Vector, c::Vector, d::Vector, τ::Vector, σ2::Vector, V::Matrix, D::Vector, U::Matrix, ϕ::Matrix, S_n::Matrix)
+function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractVector,
+    d::AbstractVector, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
+    D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix)
 
+    J::Int64 = length(a)
     R::Int64 = 2 * J
     # sum of a coefficients
     suma = sum(a)
@@ -97,48 +99,205 @@ end
 
 See Foreman-Mackey et al. 2017 for more details.
 """
-function solve_prec(y::Vector, U::Matrix, W::Matrix, D::Vector, ϕ::Matrix)
+function solve_prec!(z::AbstractVector, y::AbstractVector,
+    U::AbstractMatrix, W::AbstractMatrix, D::AbstractVector, ϕ::AbstractMatrix)
     T = eltype(U)
     N = length(y)
     R = size(U, 1)
-    zp = zeros(T, N)
-    z = zeros(T, N)
-    f = zeros(T, R, N)
-    g = zeros(T, R, N)
+    # z = Vector{T}(undef, N)
+    f = Vector{T}(undef, R)
+    fp = zeros(T, R)
+    g = Vector{T}(undef, R)
+    gp = zeros(T, R)
     logdetD = log.(D[1])
     # because ϕ[j,1] = 0
-    zp[1] = y[1]
+    z[1] = y[1]
 
 
     # forward substitution
     @inbounds for n in 2:N
         s = 0.0
-        z_p = zp[n-1]
+        z_p = z[n-1]
         for j in 1:R
-            f[j, n] = (f[j, n-1] + W[j, n-1] * z_p) * ϕ[j, n-1]
-            s += U[j, n] * f[j, n]
+            f[j] = (gp[j] + W[j, n-1] * z_p) * ϕ[j, n-1]
+            s += U[j, n] * f[j]
         end
+        gp = f
         logdetD += log(abs(D[n]))
-        zp[n] = y[n] - s
+        z[n] = y[n] - s
     end
 
     # backward substitution
-    z[N] = zp[N] / D[N]
+    z[N] /= D[N]
     @inbounds for n = N-1:-1:1
         s = 0.0
         zn = z[n+1]
         for j in 1:R
-            g[j, n] = (g[j, n+1] + U[j, n+1] * zn) * ϕ[j, n]
-            s += W[j, n] * g[j, n]
+            g[j] = (fp[j] + U[j, n+1] * zn) * ϕ[j, n]
+            s += W[j, n] * g[j]
         end
-        z[n] = zp[n] / D[n] - s
+        fp = g
+        z[n] = z[n] / D[n] - s
     end
 
-    return z, logdetD
+    return logdetD
+end
+
+""" Compute the log likelihood of the GP at the points τ given the data y and time t.
+"""
+function log_likelihood(cov::SumOfSemiSeparable, τ::Vector, y::Vector, σ2::Vector)
+
+    N::Int64 = length(y)
+    a, b, c, d = cov.a, cov.b, cov.c, cov.d
+    # initialise the matrices and vectors
+    T = eltype(a)
+    # number of terms
+    J::Int64 = length(a)
+    # number of rows in U and V, twice the number of terms
+    R::Int64 = 2 * J
+
+    S_n = zeros(T, R, R)
+    ϕ = Matrix{T}(undef, R, N - 1)
+    U = Matrix{T}(undef, R, N)
+    V = Matrix{T}(undef, R, N)
+    D = Vector{T}(undef, N)
+
+    init_semi_separable!(a, b, c, d, τ, σ2, V, D, U, ϕ, S_n)
+
+    z = Vector{T}(undef, N)
+
+    logdetD = solve_prec!(z, y, U, V, D, ϕ)
+    return -logdetD / 2 - N * log(2π) / 2 - y'z / 2
+end
+
+""" Compute the posterior mean of the GP at the points τ given the data y and time t.
+"""
+function predict(cov::SumOfSemiSeparable, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector)
+
+    M = length(τ)
+    N = length(t)
+    # initialise the matrices and vectors
+    # get the coefficients
+    a, b, c, d = cov.a, cov.b, cov.c, cov.d
+    T = eltype(a)
+    # number of terms
+    J::Int64 = length(a)
+    # number of rows in U and V, twice the number of terms
+    R::Int64 = 2 * J
+
+    S_n = zeros(T, R, R)
+    ϕ = Matrix{T}(undef, R, N - 1)
+    U = Matrix{T}(undef, R, N)
+    V = Matrix{T}(undef, R, N)
+    D = Vector{T}(undef, N)
+    init_semi_separable!(a, b, c, d, t, σ², V, D, U, ϕ, S_n)
+    # get z 
+    z = Vector{T}(undef, N)
+
+    _ = solve_prec!(z, y, U, V, D, ϕ)
+
+
+    Q = zeros(T, R) # same as in the paper
+    μₘ = zeros(T, M)
+    n₀L = searchsortedfirst.(Ref(t), τ) .- 1
+    S = zeros(T, R) # ia  Q' * X⁻ 
+
+    start = 1
+    ### forward pass ###
+    for (m, n₀) in enumerate(n₀L)
+        τm = τ[m]
+        # compute Q, S
+        #-----------------#
+        for n in start:n₀-1
+            start += 1
+            tn = t[n]
+            tn₊₁ = t[n+1]
+            zn = z[n]
+
+            Q[1:2:end] = (Q[1:2:end] .+ zn .* cos.(d .* tn)) .* exp.(-c .* (tn₊₁ .- tn))
+            Q[2:2:end] = (Q[2:2:end] .+ zn .* sin.(d .* tn)) .* exp.(-c .* (tn₊₁ .- tn))
+        end
+        # compute S = X⁻' * Q and then update Q
+        if start >= n₀ && n₀ != 0
+            tn = t[n₀]
+            zn = z[n₀]
+            if n₀ == N
+                tn₊₁ = t[n₀]
+            else
+                tn₊₁ = t[n₀+1]
+            end
+
+            S[2:2:end] = (Q[2:2:end] .+ zn .* sin.(d .* tn)) .* exp.(-c .* (τm .- tn)) .* (a .* sin.(d .* τm) .- b .* cos.(d .* τm))
+            S[1:2:end] = (Q[1:2:end] .+ zn .* cos.(d .* tn)) .* exp.(-c .* (τm - tn)) .* (a .* sin.(d .* τm) .+ b .* cos.(d .* τm))
+            # update Q for the next iteration
+            if start + 1 == n₀
+                start += 1
+
+                Q[1:2:end] = (Q[1:2:end] .+ zn .* cos.(d .* tn)) .* exp.(-c .* (tn₊₁ .- tn))
+                Q[2:2:end] = (Q[2:2:end] .+ zn .* sin.(d .* tn)) .* exp.(-c .* (tn₊₁ .- tn))
+            end
+        end
+        #-----------------#
+        μₘ[m] = sum(S)
+    end
+    # reset Q
+    fill!(Q, 0.0)
+
+    ### backward pass ###
+    stop = N
+    for (m, n₀) in Iterators.reverse(enumerate(n₀L))
+        if n₀ != N # if n₀ == N, then we already have the value for μₘ[m]
+            τm = τ[m]
+            stop_cur = stop
+            for n in stop_cur:-1:n₀+2
+                stop -= 1
+                tn = t[n]
+                tn₋₁ = t[n-1]
+                zn = z[n]
+
+                Q[1:2:end] = (Q[1:2:end] .+ zn .* (a .* cos.(d .* tn) .+ b .* sin.(d .* tn))) .* exp.(-c .* (tn - tn₋₁))
+                Q[2:2:end] = (Q[2:2:end] .+ zn .* (a .* sin.(d .* tn) .- b .* cos.(d .* tn))) .* exp.(-c .* (tn - tn₋₁))
+
+            end
+
+            # compute S = X⁺' * Q and then update Q
+            n = n₀ + 1
+            zn = z[n]
+            tn = t[n]
+            if n == 1
+                tn₋₁ = t[1]
+            else
+                tn₋₁ = t[n-1]
+            end
+
+            S[1:2:end] = (Q[1:2:end] .+ zn .* (a .* cos.(d .* tn) .+ b .* sin.(d .* tn))) .* exp.(-c .* (tn .- τm)) .* cos.(d .* τm)
+            S[2:2:end] = (Q[2:2:end] .+ zn .* (a .* sin.(d .* tn) .- b .* cos.(d .* tn))) .* exp.(-c .* (tn .- τm)) .* sin.(d .* τm)
+            # update Q for the next iteration
+            if m != 1
+                k = m
+            else
+                k = 2
+            end
+
+            if (stop_cur == n₀ + 1) && (n₀L[k] != n₀L[k-1]) # if n₀L[k] == n₀L[k-1], then we do not need to update Q yet
+                stop -= 1
+
+                Q[1:2:end] = (Q[1:2:end] .+ zn .* (a .* cos.(d .* tn) .+ b .* sin.(d .* tn))) .* exp.(-c .* (tn - tn₋₁))
+                Q[2:2:end] = (Q[2:2:end] .+ zn .* (a .* sin.(d .* tn) .- b .* cos.(d .* tn))) .* exp.(-c .* (tn - tn₋₁))
+
+            end
+
+            μₘ[m] += sum(S)
+        end
+
+    end
+
+    return μₘ
+
 end
 
 
-function simulate(rng::AbstractRNG,cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
+function simulate(rng::AbstractRNG, cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
     """
     simulate(cov::SumOfSemiSeparable, τ::Vector, σ2::Vector)
 
@@ -147,6 +306,8 @@ function simulate(rng::AbstractRNG,cov::SumOfSemiSeparable, τ::AbstractVector, 
     N::Int64 = length(τ)
 
     q = randn(rng, N)
+
+
     # initialise the matrices and vectors
     a::Vector, b::Vector, c::Vector, d::Vector = cov.a::Vector, cov.b::Vector, cov.c::Vector, cov.d::Vector
     T = eltype(a)
@@ -161,52 +322,23 @@ function simulate(rng::AbstractRNG,cov::SumOfSemiSeparable, τ::AbstractVector, 
     V = zeros(T, R, N)
     D::Vector = zeros(T, N)::Union{Vector,Matrix{Float64}}
 
-    init_semi_separable!(J::Int64, a::Vector, b::Vector, c::Vector, d::Vector, τ, σ2, V, D::Vector, U, ϕ, S_n)
+    init_semi_separable!(a::Vector, b::Vector, c::Vector, d::Vector, τ, σ2, V, D::Vector, U, ϕ, S_n)
 
     y_sim = zeros(N)
     y_sim[1] = sqrt(D[1]) * q[1]
-    f = zeros(N, R)
+    f = zeros(R)
+    g = zeros(R)
 
     for n in 2:N
         for j in 1:R
-            f[n, j] = ϕ[j, n-1] * (f[n-1, j] + V[j, n-1] * sqrt(D[n-1]) * q[n-1])
-            y_sim[n] += U[j, n] * f[n, j]
+            f[j] = ϕ[j, n-1] * (g[j] + V[j, n-1] * sqrt(D[n-1]) * q[n-1])
+            y_sim[n] += U[j, n] * f[j]
         end
+        g = f
         y_sim[n] += sqrt(D[n]) * q[n]
     end
 
     return y_sim
 end
 
-simulate(cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector) = simulate(Random.GLOBAL_RNG,cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
-
-"""
-
-Compute the log-likelihood of the data y given the covariance function cov
-"""
-function log_likelihood(cov::SumOfSemiSeparable, τ::Vector, y::Vector, σ2::Vector)
-
-    N::Int64 = length(y)
-
-    # initialise the matrices and vectors
-    a::Vector, b::Vector, c::Vector, d::Vector = cov.a::Vector, cov.b::Vector, cov.c::Vector, cov.d::Vector
-    T = eltype(a)
-    # number of terms
-    J::Int64 = length(a)
-    # number of rows in U and V, twice the number of terms
-    R::Int64 = 2 * J
-
-    S_n = zeros(T, R, R)
-    ϕ = zeros(T, R, N - 1)
-    U = zeros(T, R, N)
-    V = zeros(T, R, N)
-    D::Vector = zeros(T, N)::Union{Vector,Matrix{Float64}}
-
-    init_semi_separable!(J::Int64, a::Vector, b::Vector, c::Vector, d::Vector, τ, σ2, V, D::Vector, U, ϕ, S_n)
-
-    z::Union{Vector,Matrix{Float64}}, logdetD::Any = solve_prec(y, U, V, D, ϕ)
-    # println("logdetD = ", logdetD)
-    # println("z = ", z)
-    # println("chi2 = ", y'z *0.5 )
-    return -logdetD / 2 - N * log(2π) / 2 - y'z / 2
-end
+simulate(cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector) = simulate(Random.GLOBAL_RNG, cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
