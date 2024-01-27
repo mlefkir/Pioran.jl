@@ -1,4 +1,4 @@
-using Pioran: SHO
+using Pioran: SHO, Exp, Celerite
 
 abstract type Model end
 abstract type PowerSpectralDensity <: Model end
@@ -165,11 +165,21 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
         for i in 2:n_components
             covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
         end
-        # else if basis_function == "DRWSHO"
-        #     covariance = SHO(var * amplitudes[1] / variance, 2π * spectral_points[1], 1 / √2)
-        #     for i in 2:n_components
-        #         covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
-        #     end
+    elseif basis_function == "DRWSHO"
+
+        ω = 2π .* spectral_points[i]
+        for i in 1:n_components
+            amplitudes[i] *= ω[i] / 6
+        end
+        variance = sum(amplitudes) * 2
+        b = √3 / 6 * ω
+        c = ω / 2
+        d = √3 / 2 * ω
+
+        covariance = Celerite(var * amplitudes[1] / variance, b[1], c[1], d[1]) + Exp(var * amplitudes[1] / variance, 2 * c[1])
+        for i in 2:n_components
+            covariance += Celerite(var * amplitudes[i] / variance, b[i], c[i], d[i]) + Exp(var * amplitudes[i] / variance, 2 * c[i])
+        end
     else
         error("Basis function" * basis_function * "not implemented")
     end
