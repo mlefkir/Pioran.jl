@@ -115,11 +115,9 @@ This is essentially to check that the model and the approximation are consistent
     
 """
 function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64=20, var::Real=1.0, basis_function::String="SHO")
-    spectral_points, spectral_matrix = build_approx(n_components, f0, fM)
-
+    spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function=basis_function)
     psd_normalised = get_normalised_psd(psd_model, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
-
     psd = zeros(length(f))
     if basis_function == "SHO"
         for i in 1:n_components
