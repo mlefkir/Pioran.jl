@@ -104,7 +104,6 @@ function solve_prec!(z::AbstractVector, y::AbstractVector,
     T = eltype(U)
     N = length(y)
     R = size(U, 1)
-    # z = Vector{T}(undef, N)
     f = Vector{T}(undef, R)
     fp = zeros(T, R)
     g = Vector{T}(undef, R)
