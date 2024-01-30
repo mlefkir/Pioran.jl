@@ -137,7 +137,7 @@ plot_psd_ppc(samples, variance_samples, f0, fM, model; path="")
 Plot the posterior predictive power spectral density
     
 """
-function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=true, n_frequencies=1000, path="")
+function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="")
     theme = Pioran.get_theme()
     set_theme!(theme)
 
@@ -161,16 +161,20 @@ function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=true, n
     fig = Figure(size=(800, 600))
 
     if plot_f_P
+
+        psd_quantiles = vquantile!.(Ref(f.*psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+        psd_approx_quantiles = vquantile!.(Ref(f.*psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+    
         ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="f PSD",
         xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
 
-        lines!(ax1, f,f.* vec(psd_quantiles[3]), label="Model Median", color=:blue)
-        band!(ax1, f, f.*vec(psd_quantiles[1]), vec(psd_quantiles[5]), color=(:blue, 0.2), label="95%")
-        band!(ax1, f, f.*vec(psd_quantiles[2]), vec(psd_quantiles[4]), color=(:blue, 0.4), label="68%")
+        lines!(ax1, f, vec(psd_quantiles[3]), label="Model Median", color=:blue)
+        band!(ax1, f, vec(psd_quantiles[1]), vec(psd_quantiles[5]), color=(:blue, 0.2), label="95%")
+        band!(ax1, f, vec(psd_quantiles[2]), vec(psd_quantiles[4]), color=(:blue, 0.4), label="68%")
 
-        lines!(ax1, f, f.*vec(psd_approx_quantiles[3]), label="Approx Median", color=:red)
-        band!(ax1, f, f.*vec(psd_approx_quantiles[1]), vec(psd_approx_quantiles[5]), color=(:red, 0.2), label="95%")
-        band!(ax1, f,f.* vec(psd_approx_quantiles[2]), vec(psd_approx_quantiles[4]), color=(:red, 0.4), label="68%")
+        lines!(ax1, f, vec(psd_approx_quantiles[3]), label="Approx Median", color=:red)
+        band!(ax1, f, vec(psd_approx_quantiles[1]), vec(psd_approx_quantiles[5]), color=(:red, 0.2), label="95%")
+        band!(ax1, f, vec(psd_approx_quantiles[2]), vec(psd_approx_quantiles[4]), color=(:red, 0.4), label="68%")
     else
         ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="PSD",
         xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
