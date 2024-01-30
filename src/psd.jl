@@ -1,4 +1,4 @@
-using Pioran: SHO
+using Pioran: SHO, Exp, Celerite
 
 abstract type Model end
 abstract type PowerSpectralDensity <: Model end
@@ -73,7 +73,7 @@ function init_psd_decomp(spectral_points::AbstractVector{<:Real}, spectral_matri
                 spectral_matrix[j, k] = 1 / (1 + (spectral_points[j] / spectral_points[k])^4)
             end
         end
-    elseif basis_function == "DRWSHO"
+    elseif basis_function == "DRWCelerite"
         for j in 1:J
             for k in 1:J
                 spectral_matrix[j, k] = 1 / (1 + (spectral_points[j] / spectral_points[k])^6)
@@ -115,17 +115,15 @@ This is essentially to check that the model and the approximation are consistent
     
 """
 function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64=20, var::Real=1.0, basis_function::String="SHO")
-    spectral_points, spectral_matrix = build_approx(n_components, f0, fM)
-
+    spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function=basis_function)
     psd_normalised = get_normalised_psd(psd_model, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
-
     psd = zeros(length(f))
     if basis_function == "SHO"
         for i in 1:n_components
             psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
         end
-    elseif basis_function == "DRWSHO"
+    elseif basis_function == "DRWCelerite"
         for i in 1:n_components
             psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
         end
@@ -155,21 +153,31 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
     psd_normalised = get_normalised_psd(psd_model, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
 
-    for i in 1:n_components
-        amplitudes[i] *= spectral_points[i]
-    end
-    variance = sum(amplitudes)
-
     if basis_function == "SHO"
+
+        for i in 1:n_components
+            amplitudes[i] *= spectral_points[i]
+        end
+        variance = sum(amplitudes)
+
         covariance = SHO(var * amplitudes[1] / variance, 2π * spectral_points[1], 1 / √2)
         for i in 2:n_components
             covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
         end
-        # else if basis_function == "DRWSHO"
-        #     covariance = SHO(var * amplitudes[1] / variance, 2π * spectral_points[1], 1 / √2)
-        #     for i in 2:n_components
-        #         covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
-        #     end
+    elseif basis_function == "DRWCelerite"
+
+        ω = 2π * spectral_points
+        variance = sum(ω .* amplitudes) / 3
+
+        a = amplitudes .* ω / 6 * var / variance
+        b = √3 * a
+        c = ω / 2
+        d = √3 * c
+
+        covariance = Celerite(a[1], b[1], c[1], d[1]) + Exp(a[1], 2 * c[1])
+        for i in 2:n_components
+            covariance += Celerite(a[i], b[i], c[i], d[i]) + Exp(a[i], 2 * c[i])
+        end
     else
         error("Basis function" * basis_function * "not implemented")
     end
