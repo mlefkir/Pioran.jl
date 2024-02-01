@@ -9,3 +9,7 @@ makedocs(sitename="Pioran.jl",
     format=Documenter.HTML(
         prettyurls=get(ENV, "CI", nothing) == "true"
     ))#, format=:html)
+
+    deploydocs(
+        repo = "github.com/mlefkir/Pioran.jl.git",
+    )
