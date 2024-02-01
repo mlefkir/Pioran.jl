@@ -124,6 +124,8 @@ function plot_diag(f, residuals, ratios, f_min, f_max; path="")
     plot_boxplot_psd_approx(residuals, ratios, path=path)
 end
 
+""" Run the diagnostics for the PSD approximation
+"""
 function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="")
     _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model)
     plot_diag(f, residuals, ratios, f_min, f_max, path=path)
@@ -161,7 +163,6 @@ function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=false, 
     fig = Figure(size=(800, 600))
 
     if plot_f_P
-
         psd_quantiles = vquantile!.(Ref(f.*psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
         psd_approx_quantiles = vquantile!.(Ref(f.*psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
     

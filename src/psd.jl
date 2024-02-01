@@ -5,12 +5,32 @@ abstract type PowerSpectralDensity <: Model end
 
 abstract type BendingPowerLaw <: PowerSpectralDensity end
 
+""" SimpleBendingPowerLaw(α₁, f₁, α₂)
+
+    Simple bending power law model for the power spectral density
+
+    α₁: the first power law index
+    f₁: the first break frequency
+    α₂: the second power law index
+
+"""
 struct SimpleBendingPowerLaw{T<:Real} <: BendingPowerLaw
     α₁::T
     f₁::T
     α₂::T
 end
 
+""" DoubleBendingPowerLaw(α₁, f₁, α₂, f₂, α₃)
+
+    Double bending power law model for the power spectral density
+
+    α₁: the first power law index
+    f₁: the first break frequency
+    α₂: the second power law index
+    f₂: the second break frequency
+    α₃: the third power law index
+
+"""
 struct DoubleBendingPowerLaw{T<:Real} <: BendingPowerLaw
     α₁::T
     f₁::T
@@ -19,6 +39,17 @@ struct DoubleBendingPowerLaw{T<:Real} <: BendingPowerLaw
     α₃::T
 end
 
+""" DoubleBendingPowerLaw_Bis(α₀, f₁, Δα₁, Δf, Δα₂)
+
+    Double bending power law model for the power spectral density
+
+    α₀: the first power law index
+    f₁: the first break frequency
+    Δα₁: the first difference in power law index
+    Δf: the second break frequency
+    Δα₂: the second difference in power law index
+
+"""
 struct DoubleBendingPowerLaw_Bis{T<:Real} <: BendingPowerLaw
     α₀::T
     f₁::T
