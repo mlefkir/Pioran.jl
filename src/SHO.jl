@@ -30,6 +30,8 @@ function celerite_coefs(covariance::SHO)
         c = √2 / 2 * covariance.ω₀
         d = √2 / 2 * covariance.ω₀
         return [a, b, c, d]
+    else
+        error("SHO with Q≠1/√2 not implemented yet")
     end
 end
 
