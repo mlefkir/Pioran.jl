@@ -1,4 +1,8 @@
+""" 
+    log_likelihood_direct(cov::KernelFunctions.SimpleKernel, t::Vector, y::Vector, σ²::Vector)
 
+    Compute the log-likelihood of the data Y given the GP f with the direct solver.
+"""
 function log_likelihood_direct(cov::KernelFunctions.SimpleKernel, t::Vector, y::Vector, σ²::Vector)
 
     N::Int64 = length(y)
@@ -16,6 +20,59 @@ function log_likelihood_direct(cov::KernelFunctions.SimpleKernel, t::Vector, y::
 
 end
 
+""" 
+    predict_direct(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::AbstractVector, σ²::AbstractVector)
+
+    Compute the posterior covariance of the GP at the points τ given the times t and the noise variance σ².
+"""
+
+function predict_cov(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::AbstractVector, σ²::AbstractVector)
+
+    N = length(t)
+    M = length(τ)
+
+    K0 = zeros(N, N)
+    Kτ = zeros(M, M)
+    Kτ0 = zeros(M, N)
+
+    # fill the matrices
+    @inbounds for i in 1:N
+        @inbounds for j in 1:N
+            K0[i, j] = cov.(t[i], t[j])
+        end
+    end
+
+    @inbounds for i in 1:M
+        @inbounds for j in 1:M
+            Kτ[i, j] = cov.(τ[i], τ[j])
+        end
+    end
+
+    @inbounds for i in 1:M
+        @inbounds for j in 1:N
+            Kτ0[i, j] = cov.(τ[i], t[j])
+        end
+    end
+
+    # add the noise
+    K0 += Diagonal(σ²)
+
+    # Cholesky decomposition of the covariance matrix
+    L = cholesky(K0).U'
+    
+    # solve the linear system
+    w = L \ Kτ0'
+
+    # compute the posterior covariance
+    K_p = Kτ - w'w
+    return K_p
+end
+
+""" 
+    predict_direct(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector, with_covariance::Bool=false)
+
+    Compute the posterior mean of the GP at the points τ given the data (t, y) and the noise variance σ².
+"""
 function predict_direct(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector, with_covariance::Bool=false)
 
     N = length(t)

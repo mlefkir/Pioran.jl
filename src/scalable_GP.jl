@@ -5,16 +5,7 @@ struct ScalableGP{Typef<:GP{<:AbstractGPs.ConstMean},Tk<:SumOfSemiSeparable} <: 
 end
 
 # const FinitePosteriorGP = AbstractGPs.FiniteGP{<:ScalableGP}
-# function _predict_mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
-#     K = fp.f.kernel
-#     x = fp.f.f.x
-#     y = fp.y
-#     σ2 = diag(fp.f.Σy)
-#     return predict(K, x, τ, y, σ2)
-# end
 
-# AbstractGPs.mean(f::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = _predict_mean(f, τ)
-# AbstractGPs.mean(f::PosteriorGP) = _predict_mean(f, f.f.f.x)
 
 ScalableGP(f::GP) = ScalableGP(f, f.kernel)
 ScalableGP(kernel::SumOfSemiSeparable) = ScalableGP(GP(0.0, kernel), kernel)
@@ -29,7 +20,11 @@ end
 
 posterior(f::FiniteScalableGP, y::AbstractVecOrMat{<:Real}) = PosteriorGP(f, y)
 
+""" 
+    _predict_mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
 
+    Compute the Posterior mean of the GP at the points τ.
+"""
 function _predict_mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
     K = fp.f.f.kernel
     x = fp.f.x
@@ -38,9 +33,51 @@ function _predict_mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
     return predict(K, τ, x, y, σ2)
 end
 
+""" 
+    _predict_cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
+
+    Compute the posterior covariance of the GP at the points τ.
+"""
+function _predict_cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
+    K = fp.f.f.kernel
+    x = fp.f.x
+    σ2 = diag(fp.f.Σy)
+    return predict_cov(K, τ, x, σ2)
+end
+
 AbstractGPs.mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = _predict_mean(fp, τ)
 AbstractGPs.mean(fp::PosteriorGP) = _predict_mean(fp, fp.f.x)
+AbstractGPs.cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = _predict_cov(fp, τ)
+AbstractGPs.cov(fp::PosteriorGP) = _predict_cov(fp, fp.f.x)
 
+function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP,τ::AbstractVecOrMat{<:Real}, N::Int64=1)
+    """
+    rand(rng::AbstractRNG, f::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int=1)
+
+    Sample N realisations from the posterior GP at the points x.
+    """
+    μ = mean(fp,τ)
+    Σ = cov(fp,τ)
+    post_dist = MvNormal(μ, Σ)
+
+    return rand(rng, post_dist, N)
+end
+
+function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, N::Int64=1)
+    """
+    rand(rng::AbstractRNG, f::PosteriorGP, N::Int=1)
+
+    Sample N realisations from the posterior GP at the points x.
+    """
+    μ = mean(fp)
+    Σ = cov(fp)
+    post_dist = MvNormal(μ, Σ)
+
+    return rand(rng, post_dist, N)
+end
+
+AbstractGPs.rand(fp::PosteriorGP, N::Int64) = AbstractGPs.rand(Random.GLOBAL_RNG, fp, N)
+AbstractGPs.rand(fp::PosteriorGP,τ::AbstractVecOrMat{<:Real}, N::Int64) = AbstractGPs.rand(Random.GLOBAL_RNG, fp,τ, N)
 
 
 function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP)
