@@ -49,6 +49,7 @@ function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
     res_quantiles = vquantile!.(Ref(residuals), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
     rat_quantiles = vquantile!.(Ref(ratios), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
 
+    #   figure
     fig = Figure(size=(800, 600))
     ax1 = Axis(fig[1, 1], xscale=log10, ylabel="Residuals", xminorticks=IntervalsBetween(9))
     ax2 = Axis(fig[2, 1], xscale=log10, ylabel="Ratios", xminorticks=IntervalsBetween(9), xlabel="Frequency")
@@ -124,11 +125,10 @@ function plot_diag(f, residuals, ratios, f_min, f_max; path="")
     plot_boxplot_psd_approx(residuals, ratios, path=path)
 end
 
-function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="")
-    _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model)
+function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="", basis_function="SHO")
+    _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model, basis_function=basis_function)
     plot_diag(f, residuals, ratios, f_min, f_max, path=path)
 end
-
 
 
 """
@@ -162,11 +162,11 @@ function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=false, 
 
     if plot_f_P
 
-        psd_quantiles = vquantile!.(Ref(f.*psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
-        psd_approx_quantiles = vquantile!.(Ref(f.*psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
-    
+        psd_quantiles = vquantile!.(Ref(f .* psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+        psd_approx_quantiles = vquantile!.(Ref(f .* psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+
         ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="f PSD",
-        xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
+            xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
 
         lines!(ax1, f, vec(psd_quantiles[3]), label="Model Median", color=:blue)
         band!(ax1, f, vec(psd_quantiles[1]), vec(psd_quantiles[5]), color=(:blue, 0.2), label="95%")
@@ -177,15 +177,15 @@ function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=false, 
         band!(ax1, f, vec(psd_approx_quantiles[2]), vec(psd_approx_quantiles[4]), color=(:red, 0.4), label="68%")
     else
         ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="PSD",
-        xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
+            xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
 
         lines!(ax1, f, vec(psd_quantiles[3]), label="Model Median", color=:blue)
         band!(ax1, f, vec(psd_quantiles[1]), vec(psd_quantiles[5]), color=(:blue, 0.2), label="95%")
         band!(ax1, f, vec(psd_quantiles[2]), vec(psd_quantiles[4]), color=(:blue, 0.4), label="68%")
 
-        lines!(ax1, f,vec(psd_approx_quantiles[3]), label="Approx Median", color=:red)
+        lines!(ax1, f, vec(psd_approx_quantiles[3]), label="Approx Median", color=:red)
         band!(ax1, f, vec(psd_approx_quantiles[1]), vec(psd_approx_quantiles[5]), color=(:red, 0.2), label="95%")
-        band!(ax1, f,vec(psd_approx_quantiles[2]), vec(psd_approx_quantiles[4]), color=(:red, 0.4), label="68%")
+        band!(ax1, f, vec(psd_approx_quantiles[2]), vec(psd_approx_quantiles[4]), color=(:red, 0.4), label="68%")
     end
     fig[2, 1] = Legend(fig, ax1, orientation=:horizontal,
         tellwidth=false,
@@ -204,12 +204,12 @@ function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=false, 
 end
 
 """
-    plot_ppc_lsp(samples_𝓟, samples_ν, samples_μ, samples_variance, t, y, yerr, f0, fM, model; n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="")
+    plot_ppc_lsp(samples_𝓟,samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="")
 
 Plot the posterior predictive Lomb-Scargle periodogram
 
 """
-function plot_lsp_ppc(samples_𝓟, samples_ν, samples_μ, samples_variance, t, y, yerr, f0, fM, model; n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="")
+function plot_lsp_ppc(samples_𝓟,samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="",basis_function="SHO")
     #set theme and create output directory
     theme = Pioran.get_theme()
     set_theme!(theme)
@@ -224,7 +224,7 @@ function plot_lsp_ppc(samples_𝓟, samples_ν, samples_μ, samples_variance, t,
     # get the posterior predictive lombscargle periodogram
     for k in 1:n_samples
         𝓟 = model(samples_𝓟[k, :]...)
-        𝓡 = approx(𝓟, f0, fM, n_components, samples_variance[k])
+        𝓡 = approx(𝓟, f0, fM, n_components, samples_variance[k],basis_function=basis_function)
         f = ScalableGP(samples_μ[k], 𝓡)
         σ2 = yerr .^ 2 * samples_ν[k]
         fx = f(t, σ2)
