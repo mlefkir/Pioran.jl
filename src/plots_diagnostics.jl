@@ -229,7 +229,12 @@ function plot_psd_ppc(samples, samples_variance, samples_ν, t, yerr, f0, fM, mo
 
     a = vcat([f', psd_quantiles..., psd_approx_quantiles...])
 
-    open(path * "ppc_data.txt"; write=true) do f
+    open(path*"psd_noise_levels.txt"; write=true) do f
+        write(f, "# Noise levels\n# mean_noise_level, median_noise_level\n")
+        writedlm(f, [mean_noise_level, median_noise_level])
+    end
+
+    open(path * "psd_ppc_data.txt"; write=true) do f
         write(f, "# Posterior predictive power spectral density\n# quantiles=[0.025, 0.16, 0.5, 0.84, 0.975] \n# f, psd_quantiles, psd_approx_quantiles\n")
         writedlm(f, a)
     end
@@ -314,7 +319,7 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
     f_max = 1 / minimum(diff(t)) / 2
 
     # plot the posterior predictive LSP
-    fig = Figure(size=(800, 600))
+    fig = Figure(size=(800, 500))
     ax1 = Axis(fig[1, 1],
         xscale=log10,
         yscale=log10,
@@ -410,7 +415,7 @@ end
 function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_intervals=[95, 99], path="")
 
     sigs = [quantile(Normal(0, 1), (50 + ci / 2) / 100) for ci in confidence_intervals]
-    fig = Figure(size=(1000, 600))
+    fig = Figure(size=(700, 400))
     gc = fig[1, :] = GridLayout()
     gd = fig[2, :] = GridLayout()
 
@@ -443,7 +448,11 @@ function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_inter
     acvf = autocor(mean_res, lags)
     acvf_median = autocor(vec(res_quantiles[3]), lags)
 
-
+    open(path * "ppc_residuals_acvf.txt"; write=true) do f
+        write(f, "# Autocorrelation of the residuals \n# lags, acvf, acvf_median\n")
+        writedlm(f, [lags, acvf, acvf_median])
+    end
+    
     stem!(ax3, lags, vec(acvf), color=:black, label="ACVF")
     stem!(ax3, lags, vec(acvf_median), color=:blue, label="ACVF median")
 
@@ -457,7 +466,7 @@ end
 """ Plot the posterior predictive time series """
 function plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr; path="")
 
-    fig = Figure(size=(1000, 600))
+    fig = Figure(size=(800, 400))
     ax1 = Axis(fig[1, 1],
         xlabel="Time (d)",
         ylabel="Time series",
