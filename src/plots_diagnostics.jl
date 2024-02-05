@@ -119,6 +119,14 @@ function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequen
     return psd, psd_approx, residuals, ratios, f
 end
 
+""" Plot the diagnostics of the approximation of the PSD 
+    The diagnostics include the mean, quantiles and boxplot of the residuals and ratios
+
+    This function is a wrapper for the following functions:
+    - plot_mean_approx
+    - plot_quantiles_approx
+    - plot_boxplot_psd_approx
+"""
 function plot_diag(f, residuals, ratios, f_min, f_max; path="")
     plot_mean_approx(f, residuals, ratios, path=path)
     plot_quantiles_approx(f, f_min, f_max, residuals, ratios, path=path)
@@ -132,22 +140,37 @@ end
 
 
 """
-plot_psd_ppc(samples, variance_samples, f0, fM, model; path="")
+plot_psd_ppc(samples, samples_variance, f0, fM, model; path="")
 
 Plot the posterior predictive power spectral density
     
 """
-function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO")
+function plot_psd_ppc(samples, samples_variance, samples_ν, t, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO")
     theme = Pioran.get_theme()
     set_theme!(theme)
 
     if !ispath(path)
         mkpath(path)
     end
-    P = size(variance_samples, 1)
+
+    dt = diff(t)
+
+    f_min = 1 / (t[end] - t[1])
+    f_max = 1 / minimum(dt) / 2.0
+
+    mean_dt = mean(dt)
+    median_dt = median(dt)
+    mean_sq_err = mean(yerr .^ 2)
+    median_sq_err = median(yerr .^ 2)
+    mean_ν = mean(samples_ν)
+    median_ν = median(samples_ν)
+    mean_noise_level = 2 * mean_ν * mean_sq_err * mean_dt
+    median_noise_level = 2 * median_ν * median_sq_err * median_dt
+
+    P = size(samples_variance, 1)
     spectral_points, _ = Pioran.build_approx(n_components, f0, fM, basis_function=basis_function)
 
-    psd, psd_approx, _, _, f = sample_approx_model(samples, variance_samples, f0, fM, model, n_frequencies=n_frequencies, basis_function=basis_function, n_components=n_components)
+    psd, psd_approx, _, _, f = sample_approx_model(samples, samples_variance, f0, fM, model, n_frequencies=n_frequencies, basis_function=basis_function, n_components=n_components)
 
     amplitudes = [Pioran.get_approx_coefficients.(Ref(model(samples[:, k]...)), f0, fM, basis_function=basis_function, n_components=n_components) for k in 1:P]
     amplitudes = mapreduce(permutedims, vcat, amplitudes)'
@@ -175,6 +198,11 @@ function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=false, 
         lines!(ax1, f, vec(psd_approx_quantiles[3]), label="Approx Median", color=:red)
         band!(ax1, f, vec(psd_approx_quantiles[1]), vec(psd_approx_quantiles[5]), color=(:red, 0.2), label="95%")
         band!(ax1, f, vec(psd_approx_quantiles[2]), vec(psd_approx_quantiles[4]), color=(:red, 0.4), label="68%")
+
+        lines!(ax1, f, f .* mean_noise_level, label="Mean noise level", color=:black, linestyle=:dash)
+        lines!(ax1, f, f .* median_noise_level, label="Median noise level", color=:black)
+
+        vlines!(ax1, [f_min; f_max], color=:black, linestyle=:dot, label="Observed window")
     else
         ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="PSD",
             xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
@@ -186,6 +214,11 @@ function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=false, 
         lines!(ax1, f, vec(psd_approx_quantiles[3]), label="Approx Median", color=:red)
         band!(ax1, f, vec(psd_approx_quantiles[1]), vec(psd_approx_quantiles[5]), color=(:red, 0.2), label="95%")
         band!(ax1, f, vec(psd_approx_quantiles[2]), vec(psd_approx_quantiles[4]), color=(:red, 0.4), label="68%")
+
+        lines!(ax1, f, ones(length(f)) * mean_noise_level, label="Mean noise level", color=:black, linestyle=:dash)
+        lines!(ax1, f, ones(length(f)) * median_noise_level, label="Median noise level", color=:black)
+        vlines!(ax1, [f_min; f_max], color=:black, linestyle=:dot, label="Observed window")
+
     end
     fig[2, 1] = Legend(fig, ax1, orientation=:horizontal,
         tellwidth=false,
@@ -230,20 +263,21 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
         fx = f(t, σ2)
         # draw a time series from the GP
         y_sim = rand(fx)
-        ls = lombscargle(t, y_sim, frequencies=freq)
+        # periodog = LombScargle.plan(t, s)
+        ls = lombscargle(t, y_sim, yerr, frequencies=freq)
         push!(Power, freqpower(ls)[2][1:end-1])
     end
 
     ls_array = mapreduce(permutedims, vcat, Power)'
     if plot_f_P
         label = "f * Periodogram"
-        ls_quantiles = vquantile!.(Ref(freq[1:end-1].*ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+        ls_quantiles = vquantile!.(Ref(freq[1:end-1] .* ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
     else
         label = "Periodogram"
         ls_quantiles = vquantile!.(Ref(ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
     end
     # compute the LSP of the observed data
-    ls_obs = lombscargle(t, y, frequencies=freq)
+    ls_obs = lombscargle(t, y, yerr, frequencies=freq)
     lsp = freqpower(ls_obs)[2][1:end-1]
     freq_obs = freqpower(ls_obs)[1][1:end-1]
 
@@ -308,7 +342,7 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
 end
 
 """ 
-    plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr,f0,fM, model,with_log_transform;samples_c=missing, n_samples=1000, path="")
+    get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr,f0,fM, model,with_log_transform;samples_c=missing, n_samples=1000, path="")
 """
 function get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred=nothing, samples_c=nothing, n_samples=1000, n_components=20, basis_function="SHO", path="")
     theme = Pioran.get_theme()
@@ -368,12 +402,14 @@ function get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_
     return ts_array, t_pred
 end
 
-""" Plot the residuals and the diagnostics of the residuals """
-function plot_residuals_diagnostics(t, mean_res, res_quantiles; path="")
+""" Plot the residuals and the autocorrelation function of the residuals 
+    
+    plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_intervals=[95, 99], path="")
 
-    # res_quantiles = vquantile!.(Ref(residuals), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
-    # mean_res = mean(residuals, dims=2)
+"""
+function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_intervals=[95, 99], path="")
 
+    sigs = [quantile(Normal(0, 1), (50 + ci / 2) / 100) for ci in confidence_intervals]
     fig = Figure(size=(1000, 600))
     gc = fig[1, :] = GridLayout()
     gd = fig[2, :] = GridLayout()
@@ -402,12 +438,17 @@ function plot_residuals_diagnostics(t, mean_res, res_quantiles; path="")
         xminorticks=IntervalsBetween(9),
         yminorticks=IntervalsBetween(9))
 
+
     lags = 0:Int(length(mean_res) // 10)
     acvf = autocor(mean_res, lags)
     acvf_median = autocor(vec(res_quantiles[3]), lags)
 
+
     stem!(ax3, lags, vec(acvf), color=:black, label="ACVF")
     stem!(ax3, lags, vec(acvf_median), color=:blue, label="ACVF median")
+
+    band!(ax3, lags, sigs[1] * ones(length(lags)) / sqrt(length(t)), -sigs[1] * ones(length(lags)) / sqrt(length(t)), color=(:black, 0.1), label="95%")
+    band!(ax3, lags, sigs[2] * ones(length(lags)) / sqrt(length(t)), -sigs[2] * ones(length(lags)) / sqrt(length(t)), color=(:black, 0.1), label="99%")
     fig
     save(path * "residuals_diagnostics.pdf", fig)
     # return fig
@@ -467,3 +508,13 @@ function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples
     writedlm(path * "ppc_t_pred.txt", t_pred)
 
 end
+
+""" 
+
+# """
+# function plot_posterior_predictive_checks(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred=nothing, samples_c=nothing, n_samples=1000, n_components=20, basis_function="SHO", path="")
+
+#     plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="", basis_function="SHO")
+#     plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, t_pred=t_pred, samples_c=samples_c, n_samples=n_samples, n_components=n_components, basis_function=basis_function, path=path)
+
+# end
