@@ -204,12 +204,12 @@ function plot_psd_ppc(samples, variance_samples, f0, fM, model; plot_f_P=false, 
 end
 
 """
-    plot_ppc_lsp(samples_𝓟,samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="")
+    plot_ppc_lsp(samples_𝓟,samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="")
 
 Plot the posterior predictive Lomb-Scargle periodogram
 
 """
-function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="", basis_function="SHO")
+function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="", basis_function="SHO")
     #set theme and create output directory
     theme = Pioran.get_theme()
     set_theme!(theme)
@@ -222,7 +222,7 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
 
     Power = []
     # get the posterior predictive lombscargle periodogram
-    for k in 1:n_samples
+    @showprogress for k in 1:n_samples
         𝓟 = model(samples_𝓟[k, :]...)
         𝓡 = approx(𝓟, f0, fM, n_components, samples_variance[k], basis_function=basis_function)
         f = ScalableGP(samples_μ[k], 𝓡)
@@ -235,8 +235,13 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
     end
 
     ls_array = mapreduce(permutedims, vcat, Power)'
-    ls_quantiles = vquantile!.(Ref(ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
-
+    if plot_f_P
+        label = "f * Periodogram"
+        ls_quantiles = vquantile!.(Ref(freq[1:end-1].*ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+    else
+        label = "Periodogram"
+        ls_quantiles = vquantile!.(Ref(ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+    end
     # compute the LSP of the observed data
     ls_obs = lombscargle(t, y, frequencies=freq)
     lsp = freqpower(ls_obs)[2][1:end-1]
@@ -253,7 +258,9 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
     end
     binned_periodogram = exp.(binned_periodogram)
     binned_freqs = exp.(binned_freqs)
-
+    if plot_f_P
+        binned_periodogram = binned_periodogram .* binned_freqs
+    end
     # save the data
     quantiles_fre = vcat([freq[1:end-1]', ls_quantiles...])
     open(path * "lsp_ppc_data.txt"; write=true) do f
@@ -278,7 +285,7 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
         xscale=log10,
         yscale=log10,
         xlabel=L"Frequency (${d}^{-1}$)",
-        ylabel="PSD",
+        ylabel=label,
         xminorticks=IntervalsBetween(9),
         yminorticks=IntervalsBetween(9),
         title="Posterior predictive Lomb-Scargle periodogram")
@@ -408,6 +415,7 @@ end
 
 """ Plot the posterior predictive time series """
 function plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr; path="")
+
     fig = Figure(size=(1000, 600))
     ax1 = Axis(fig[1, 1],
         xlabel="Time (d)",
@@ -437,7 +445,9 @@ end
 Plot the posterior predictive time series and the residuals 
 """
 function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred=nothing, samples_c=nothing, n_samples=1000, n_components=20, basis_function="SHO", path="")
+    # get the posterior predictive time series and the prediction times
     ts_array, t_pred = get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, t_pred=t_pred, samples_c=samples_c, n_samples=n_samples, n_components=n_components, basis_function=basis_function, path=path)
+    # find the indexes of the observed data in the prediction times for the residuals
     indexes = [findall(t_pred -> t_pred == t_i, t_pred)[1] for t_i in t]
 
     ts_quantiles = vquantile!.(Ref(ts_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
