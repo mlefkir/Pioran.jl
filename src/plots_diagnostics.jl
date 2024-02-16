@@ -236,6 +236,9 @@ function plot_psd_ppc(samples, samples_variance, samples_ν, t, yerr, f0, fM, mo
 
     open(path * "psd_ppc_data.txt"; write=true) do f
         write(f, "# Posterior predictive power spectral density\n# quantiles=[0.025, 0.16, 0.5, 0.84, 0.975] \n# f, psd_quantiles, psd_approx_quantiles\n")
+        if plot_f_P
+            write(f, "# f * PSD\n")
+        end
         writedlm(f, a)
     end
     save(path * "psd_ppc.pdf", fig)
@@ -310,6 +313,9 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
     binned_data = hcat(binned_freqs, binned_periodogram)
     open(path * "binned_lsp_data.txt"; write=true) do f
         write(f, "# Binned Lomb-Scargle of the data\n# freq, lsp\n")
+        if plot_f_P
+            write(f, "# f * Periodogram\n")
+        end
         writedlm(f, binned_data)
     end
 
@@ -444,7 +450,7 @@ function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_inter
         yminorticks=IntervalsBetween(9))
 
 
-    lags = 0:Int(length(mean_res) // 10)
+    lags = 0:1:Int(floor(length(mean_res) // 10))
     acvf = autocor(mean_res, lags)
     acvf_median = autocor(vec(res_quantiles[3]), lags)
 
