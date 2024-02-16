@@ -83,3 +83,57 @@ function extract_subset(rng, prefix, t, y, yerr; n_perc=0.03, take_log=true)
     end
     return t_subset, y_subset, yerr_subset, x̄, va
 end
+
+
+""" separate_samples(samples,paramnames,with_log_transform)
+
+Separate the samples into the parameters of the model and the PSD parameters.
+
+"""
+function separate_samples(samples,paramnames,with_log_transform)
+    
+    # try to find all the parameters except the PSD parameters
+    # nu
+    collected_pars = []
+    nu_index = findall(name->name=="ν", paramnames)
+    if isempty(nu_index)
+        samples_ν = ones(n_samples)
+    else
+        samples_ν = samples[:,nu_index[1]]
+        push!(collected_pars,nu_index[1])
+    end
+    # const
+    if with_log_transform
+        c_index = findall(name->name=="c", paramnames)
+        if isempty(c_index)
+            samples_c = zeros(n_samples)
+        else
+            samples_c = samples[:,c_index[1]]
+            push!(collected_pars,c_index[1])
+        end
+    else
+        samples_c = nothing
+    end
+    # mu
+    mu_index = findall(name->name=="μ", paramnames)
+    if isempty(mu_index)
+        samples_μ = zeros(n_samples)
+    else
+        samples_μ = samples[:,mu_index[1]]
+        push!(collected_pars,mu_index[1])
+    end
+    # var 
+    variance_index = findall(name->name=="variance", paramnames)
+    if isempty(variance_index)
+        error("The 'variance' parameter is not found in the parameter names")
+    else
+        samples_variance = samples[:,variance_index[1]]
+        push!(collected_pars,variance_index[1])
+    end
+    # PSD parameters
+    allpars = collect(1:length(paramnames))
+    remaining = setdiff(allpars, collected_pars)
+    println("Deducing that the PSD parameter are: ", paramnames[remaining])
+    samples_𝓟 = samples[:,remaining]
+    return samples_𝓟, samples_variance, samples_ν, samples_μ, samples_c
+end

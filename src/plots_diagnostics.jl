@@ -134,10 +134,76 @@ function plot_diag(f, residuals, ratios, f_min, f_max; path="")
 end
 
 function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="", basis_function="SHO", n_components=20)
+    println("Running prior predictive checks...")
     _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model, basis_function=basis_function, n_components=n_components)
     plot_diag(f, residuals, ratios, f_min, f_max, path=path)
 end
 
+
+"""
+    run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, with_log_transform; plots="all", n_samples=200, path="", basis_function="SHO", n_frequencies=1000, plot_f_P=false, n_components=20)
+
+Run the posterior predictive checks for the model and the approximation of the PSD
+
+Parameters  
+----------
+samples : Array{Float64, 2}
+    The samples of the model parameters
+paramnames : Array{String, 1}
+    The names of the parameters of the model
+t : Array{Float64, 1}
+    The time series
+y : Array{Float64, 1}
+    The values of the time series
+yerr : Array{Float64, 1}
+    The errors of the time series
+f0 : Float64
+    The minimum frequency for the approximation of the PSD
+fM : Float64
+    The maximum frequency for the approximation of the PSD
+model : Function
+    The model
+with_log_transform : Bool
+    If true, the flux is log-transformed
+plots : String or Array{String, 1}
+    The type of plots to make. It can be "all", "psd", "lsp", "timeseries" or a combination of them
+n_samples : Int
+    The number of samples to draw from the posterior predictive distribution
+path : String
+    The path to save the plots
+basis_function : String
+    The basis function for the approximation of the PSD
+n_frequencies : Int
+    The number of frequencies to use for the approximation of the PSD
+plot_f_P : Bool
+    If true, the plots are made in terms of f * PSD
+n_components : Int
+    The number of components to use for the approximation of the PSD
+"""
+function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, with_log_transform; plots="all", n_samples=200, path="", basis_function="SHO", n_frequencies=1000, plot_f_P=false, n_components=20)
+    println("Running posterior predictive checks...")
+    samples_𝓟, samples_variance, samples_ν, samples_μ, samples_c = separate_samples(samples, paramnames, with_log_transform)
+
+    if plots == "all"
+        println("Plotting the posterior predictive power spectral density")
+        plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components,n_frequencies=n_frequencies)
+        println("Plotting the posterior predictive Lomb-Scargle periodogram")
+        plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components,n_frequencies=n_frequencies)
+        println("Plotting the posterior predictive time series")
+        plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
+    elseif "psd" ∈ plots
+        println("Plotting the posterior predictive power spectral density")
+        plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components,n_frequencies=n_frequencies)
+    elseif "lsp" ∈ plots
+        println("Plotting the posterior predictive Lomb-Scargle periodogram")
+        plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components,n_frequencies=n_frequencies)
+    elseif "timeseries" ∈ plots
+        println("Plotting the posterior predictive time series")
+        plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
+    else
+        error("The plots argument is not valid")
+    end
+end
 
 """
 plot_psd_ppc(samples, samples_variance, f0, fM, model; path="")
@@ -170,9 +236,9 @@ function plot_psd_ppc(samples, samples_variance, samples_ν, t, yerr, f0, fM, mo
     P = size(samples_variance, 1)
     spectral_points, _ = Pioran.build_approx(n_components, f0, fM, basis_function=basis_function)
 
-    psd, psd_approx, _, _, f = sample_approx_model(samples, samples_variance, f0, fM, model, n_frequencies=n_frequencies, basis_function=basis_function, n_components=n_components)
+    psd, psd_approx, _, _, f = sample_approx_model(samples', samples_variance, f0, fM, model, n_frequencies=n_frequencies, basis_function=basis_function, n_components=n_components)
 
-    amplitudes = [Pioran.get_approx_coefficients.(Ref(model(samples[:, k]...)), f0, fM, basis_function=basis_function, n_components=n_components) for k in 1:P]
+    amplitudes = [Pioran.get_approx_coefficients.(Ref(model(samples[k, :]...)), f0, fM, basis_function=basis_function, n_components=n_components) for k in 1:P]
     amplitudes = mapreduce(permutedims, vcat, amplitudes)'
 
     psd_m = psd ./ sum(amplitudes .* spectral_points, dims=1)
@@ -229,7 +295,7 @@ function plot_psd_ppc(samples, samples_variance, samples_ν, t, yerr, f0, fM, mo
 
     a = vcat([f', psd_quantiles..., psd_approx_quantiles...])
 
-    open(path*"psd_noise_levels.txt"; write=true) do f
+    open(path * "psd_noise_levels.txt"; write=true) do f
         write(f, "# Noise levels\n# mean_noise_level, median_noise_level\n")
         writedlm(f, [mean_noise_level, median_noise_level])
     end
@@ -458,7 +524,7 @@ function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_inter
         write(f, "# Autocorrelation of the residuals \n# lags, acvf, acvf_median\n")
         writedlm(f, [lags, acvf, acvf_median])
     end
-    
+
     stem!(ax3, lags, vec(acvf), color=:black, label="ACVF")
     stem!(ax3, lags, vec(acvf_median), color=:blue, label="ACVF median")
 
@@ -523,13 +589,3 @@ function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples
     writedlm(path * "ppc_t_pred.txt", t_pred)
 
 end
-
-""" 
-
-# """
-# function plot_posterior_predictive_checks(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred=nothing, samples_c=nothing, n_samples=1000, n_components=20, basis_function="SHO", path="")
-
-#     plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="", basis_function="SHO")
-#     plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, t_pred=t_pred, samples_c=samples_c, n_samples=n_samples, n_components=n_components, basis_function=basis_function, path=path)
-
-# end
