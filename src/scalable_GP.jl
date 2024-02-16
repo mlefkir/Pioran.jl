@@ -91,6 +91,17 @@ function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP)
     return simulate(rng, f.f.kernel, f.x, σ2) .+ f.f.f.mean.c
 end
 
+function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP,t::AbstractVecOrMat{<:Real})
+    """
+    rand(rng::AbstractRNG, f::ScalableGP)
+
+    Sample a finite GP from the GP f at the points x.
+    """
+    σ2 = zeros(length(t))
+
+    return simulate(rng, f.f.kernel, t, σ2) .+ f.f.f.mean.c
+end
+
 function AbstractGPs.rand(rng::AbstractRNG, f::FiniteScalableGP)
     """
     rand(rng::AbstractRNG, f::ScalableGP)
@@ -99,9 +110,17 @@ function AbstractGPs.rand(rng::AbstractRNG, f::FiniteScalableGP)
     """
     randScalableGP(rng, f)
 end
+function AbstractGPs.rand(rng::AbstractRNG, f::FiniteScalableGP,t::AbstractVecOrMat{<:Real})
+    """
+    rand(rng::AbstractRNG, f::ScalableGP)
 
+    Sample a finite GP from the GP f at the points x.
+    """
+    randScalableGP(rng, f,t)
+end
 
 AbstractGPs.rand(f::FiniteScalableGP) = randScalableGP(Random.GLOBAL_RNG, f)
+AbstractGPs.rand(f::FiniteScalableGP,t::AbstractVecOrMat{<:Real}) = randScalableGP(Random.GLOBAL_RNG, f,t)
 
 
 function Distributions.logpdf(f::FiniteScalableGP, Y::AbstractVecOrMat{<:Real})
