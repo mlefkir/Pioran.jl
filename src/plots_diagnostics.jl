@@ -99,7 +99,7 @@ Args:
     variance_samples (Array{Float64, 1}): The variance samples
     f0 (Float64): The minimum frequency
     fM (Float64): The maximum frequency
-    model (SimpleBendingPowerLaw): The model
+    model The model
 
 """
 function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequencies=1_000, basis_function="SHO", n_components=20)
