@@ -25,7 +25,7 @@ function modelling(pars, t, y, yerr)
     σ² = ν .* yerr .^ 2
 
 
-    𝓟 = SimpleBendingPowerLaw(α₁, f₁, α₂)
+    𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
 
     # Approximation of the PSD to form a covariance function
     𝓡 = approx(𝓟, f0, fM, 20, variance)
@@ -47,7 +47,7 @@ end
 σ² = ν .* yerr .^ 2
 
 
-𝓟 = SimpleBendingPowerLaw(α₁, f₁, α₂)
+𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
 
 # Approximation of the PSD to form a covariance function
 𝓡 = approx(𝓟, f0, fM, 20, variance)

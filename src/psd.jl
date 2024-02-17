@@ -5,7 +5,7 @@ abstract type PowerSpectralDensity <: Model end
 
 abstract type BendingPowerLaw <: PowerSpectralDensity end
 
-struct SimpleBendingPowerLaw{T<:Real} <: BendingPowerLaw
+struct SingleBendingPowerLaw{T<:Real} <: BendingPowerLaw
     α₁::T
     f₁::T
     α₂::T
@@ -37,7 +37,7 @@ function calculate_psd(f, psd::DoubleBendingPowerLaw)
 
 end
 
-function calculate_psd(f, psd::SimpleBendingPowerLaw)
+function calculate_psd(f, psd::SingleBendingPowerLaw)
     return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁))
 end
 
