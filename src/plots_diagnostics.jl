@@ -133,6 +133,8 @@ function plot_diag(f, residuals, ratios, f_min, f_max; path="")
     plot_boxplot_psd_approx(residuals, ratios, path=path)
 end
 
+""" Run the diagnostics for the PSD approximation
+"""
 function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="", basis_function="SHO", n_components=20)
     println("Running prior predictive checks...")
     _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model, basis_function=basis_function, n_components=n_components)
@@ -250,10 +252,8 @@ function plot_psd_ppc(samples, samples_variance, samples_ν, t, yerr, f0, fM, mo
     fig = Figure(size=(800, 600))
 
     if plot_f_P
-
         psd_quantiles = vquantile!.(Ref(f .* psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
         psd_approx_quantiles = vquantile!.(Ref(f .* psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
-
         ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="f PSD",
             xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
 

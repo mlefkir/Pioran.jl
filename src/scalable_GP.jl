@@ -1,4 +1,11 @@
 
+"""
+Scalable Gaussian Processes
+
+This module implements scalable Gaussian processes with a sum of semi-separable kernels.
+
+The main type is `ScalableGP` which is a GP with a sum of semi-separable kernels.
+"""
 struct ScalableGP{Typef<:GP{<:AbstractGPs.ConstMean},Tk<:SumOfSemiSeparable} <: AbstractGPs.AbstractGP
     f::Typef
     kernel::Tk
@@ -18,6 +25,10 @@ struct PosteriorGP{Typef<:FiniteScalableGP,Ty<:AbstractVecOrMat{<:Real}} <: Abst
     y::Ty
 end
 
+""" posterior(f::ScalableGP, y::AbstractVecOrMat{<:Real})
+
+Compute the posterior GP given the GP f and the data y.
+"""
 posterior(f::FiniteScalableGP, y::AbstractVecOrMat{<:Real}) = PosteriorGP(f, y)
 
 """ 
