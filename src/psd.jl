@@ -5,16 +5,16 @@ abstract type PowerSpectralDensity <: Model end
 
 abstract type BendingPowerLaw <: PowerSpectralDensity end
 
-""" SimpleBendingPowerLaw(α₁, f₁, α₂)
+""" SingleBendingPowerLaw(α₁, f₁, α₂)
 
-    Simple bending power law model for the power spectral density
+    Single bending power law model for the power spectral density
 
     α₁: the first power law index
     f₁: the first break frequency
     α₂: the second power law index
 
 """
-struct SimpleBendingPowerLaw{T<:Real} <: BendingPowerLaw
+struct SingleBendingPowerLaw{T<:Real} <: BendingPowerLaw
     α₁::T
     f₁::T
     α₂::T
@@ -68,7 +68,7 @@ function calculate_psd(f, psd::DoubleBendingPowerLaw)
 
 end
 
-function calculate_psd(f, psd::SimpleBendingPowerLaw)
+function calculate_psd(f, psd::SingleBendingPowerLaw)
     return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁))
 end
 
