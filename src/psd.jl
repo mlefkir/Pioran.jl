@@ -58,25 +58,25 @@ struct DoubleBendingPowerLaw_Bis{T<:Real} <: BendingPowerLaw
     Δα₂::T
 end
 
-function calculate_psd(f, psd::DoubleBendingPowerLaw_Bis)
+function calculate(f, psd::DoubleBendingPowerLaw_Bis)
     return (f / psd.f₁)^(-psd.α₀) / (1 + (f / psd.f₁)^(psd.α₀ + psd.Δα₁)) / (1 + (f / (psd.f₁ * psd.Δf))^(psd.Δα₁ + psd.Δα₂))
 
 end
 
-function calculate_psd(f, psd::DoubleBendingPowerLaw)
+function calculate(f, psd::DoubleBendingPowerLaw)
     return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / (psd.f₂))^(psd.α₃ - psd.α₂))
 
 end
 
-function calculate_psd(f, psd::SingleBendingPowerLaw)
+function calculate(f, psd::SingleBendingPowerLaw)
     return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁))
 end
 
 
 function get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points::AbstractVector{<:Real})
-    psd_zero = calculate_psd(spectral_points[1], psd_model)
+    psd_zero = calculate(spectral_points[1], psd_model)
     # create the normalised psd
-    psd_normalised = calculate_psd.(spectral_points, Ref(psd_model)) / psd_zero
+    psd_normalised = calculate.(spectral_points, Ref(psd_model)) / psd_zero
     psd_normalised
 end
 
