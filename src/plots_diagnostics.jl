@@ -106,7 +106,7 @@ function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequen
     P = size(samples, 2)
     f = collect(10 .^ range(log10(f0), log10(fM), n_frequencies))
 
-    psd = [Pioran.calculate_psd.(f, Ref(model(samples[:, k]...))) for k in 1:P]
+    psd = [Pioran.calculate.(f, Ref(model(samples[:, k]...))) for k in 1:P]
     psd = mapreduce(permutedims, vcat, psd)'
     psd ./= psd[1, :]'
     psd .*= variance_samples'
