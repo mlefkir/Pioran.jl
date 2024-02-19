@@ -25,7 +25,6 @@ end
 
     Compute the posterior covariance of the GP at the points τ given the times t and the noise variance σ².
 """
-
 function predict_cov(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::AbstractVector, σ²::AbstractVector)
 
     N = length(t)

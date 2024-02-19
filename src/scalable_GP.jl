@@ -1,10 +1,8 @@
 
 """
-Scalable Gaussian Processes
+A scalable Gaussian process has a covariance function formed of semi-separable kernels
 
-This module implements scalable Gaussian processes with a sum of semi-separable kernels.
-
-The main type is `ScalableGP` which is a GP with a sum of semi-separable kernels.
+See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
 struct ScalableGP{Typef<:GP{<:AbstractGPs.ConstMean},Tk<:SumOfSemiSeparable} <: AbstractGPs.AbstractGP
     f::Typef
@@ -12,7 +10,6 @@ struct ScalableGP{Typef<:GP{<:AbstractGPs.ConstMean},Tk<:SumOfSemiSeparable} <: 
 end
 
 # const FinitePosteriorGP = AbstractGPs.FiniteGP{<:ScalableGP}
-
 
 ScalableGP(f::GP) = ScalableGP(f, f.kernel)
 ScalableGP(kernel::SumOfSemiSeparable) = ScalableGP(GP(0.0, kernel), kernel)
@@ -25,9 +22,10 @@ struct PosteriorGP{Typef<:FiniteScalableGP,Ty<:AbstractVecOrMat{<:Real}} <: Abst
     y::Ty
 end
 
-""" posterior(f::ScalableGP, y::AbstractVecOrMat{<:Real})
+"""
+    posterior(f::ScalableGP, y::AbstractVecOrMat{<:Real})
 
-Compute the posterior GP given the GP f and the data y.
+Compute the posterior Gaussian process `fp` given the GP `f` and the data `y`.
 """
 posterior(f::FiniteScalableGP, y::AbstractVecOrMat{<:Real}) = PosteriorGP(f, y)
 
@@ -46,7 +44,6 @@ end
 
 """ 
     _predict_cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
-
     Compute the posterior covariance of the GP at the points τ.
 """
 function _predict_cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
@@ -61,25 +58,27 @@ AbstractGPs.mean(fp::PosteriorGP) = _predict_mean(fp, fp.f.x)
 AbstractGPs.cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = _predict_cov(fp, τ)
 AbstractGPs.cov(fp::PosteriorGP) = _predict_cov(fp, fp.f.x)
 
-function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP,τ::AbstractVecOrMat{<:Real}, N::Int64=1)
+function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int64=1)
     """
     rand(rng::AbstractRNG, f::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int=1)
 
     Sample N realisations from the posterior GP at the points x.
     """
-    μ = mean(fp,τ)
-    Σ = cov(fp,τ)
+    μ = mean(fp, τ)
+    Σ = cov(fp, τ)
     post_dist = MvNormal(μ, Σ)
 
     return rand(rng, post_dist, N)
 end
 
-function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, N::Int64=1)
-    """
-    rand(rng::AbstractRNG, f::PosteriorGP, N::Int=1)
+"""
+    rand(rng::AbstractRNG, fp::PosteriorGP, N::Int=1)
+    rand(rng::AbstractRNG, fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int=1)
+    rand(fp::PosteriorGP, N::Int=1)
 
-    Sample N realisations from the posterior GP at the points x.
-    """
+Sample `N` realisations from the posterior GP `fp` at the points `τ`.
+"""
+function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, N::Int64=1)
     μ = mean(fp)
     Σ = cov(fp)
     post_dist = MvNormal(μ, Σ)
@@ -88,58 +87,38 @@ function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, N::Int64=1)
 end
 
 AbstractGPs.rand(fp::PosteriorGP, N::Int64) = AbstractGPs.rand(Random.GLOBAL_RNG, fp, N)
-AbstractGPs.rand(fp::PosteriorGP,τ::AbstractVecOrMat{<:Real}, N::Int64) = AbstractGPs.rand(Random.GLOBAL_RNG, fp,τ, N)
+AbstractGPs.rand(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int64) = AbstractGPs.rand(Random.GLOBAL_RNG, fp, τ, N)
 
 
 function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP)
-    """
-    rand(rng::AbstractRNG, f::ScalableGP)
-
-    Sample a finite GP from the GP f at the points x.
-    """
     σ2 = diag(f.Σy)
-
     return simulate(rng, f.f.kernel, f.x, σ2) .+ f.f.f.mean.c
 end
 
-function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP,t::AbstractVecOrMat{<:Real})
-    """
-    rand(rng::AbstractRNG, f::ScalableGP)
-
-    Sample a finite GP from the GP f at the points x.
-    """
+function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP, t::AbstractVecOrMat{<:Real})
     σ2 = zeros(length(t))
-
     return simulate(rng, f.f.kernel, t, σ2) .+ f.f.f.mean.c
 end
 
-function AbstractGPs.rand(rng::AbstractRNG, f::FiniteScalableGP)
-    """
+"""
     rand(rng::AbstractRNG, f::ScalableGP)
+    rand(rng::AbstractRNG, f::ScalableGP, t::AbstractVecOrMat{<:Real})
+    rand(f::ScalableGP)
+    rand(f::ScalableGP, t::AbstractVecOrMat{<:Real})
 
-    Sample a finite GP from the GP f at the points x.
-    """
-    randScalableGP(rng, f)
-end
-function AbstractGPs.rand(rng::AbstractRNG, f::FiniteScalableGP,t::AbstractVecOrMat{<:Real})
-    """
-    rand(rng::AbstractRNG, f::ScalableGP)
-
-    Sample a finite GP from the GP f at the points x.
-    """
-    randScalableGP(rng, f,t)
-end
-
+Draw a realisation from the GP `f` at the points `t`.
+"""
+AbstractGPs.rand(rng::AbstractRNG, f::FiniteScalableGP) = randScalableGP(rng, f)
+AbstractGPs.rand(rng::AbstractRNG, f::FiniteScalableGP, t::AbstractVecOrMat{<:Real}) = randScalableGP(rng, f, t)
 AbstractGPs.rand(f::FiniteScalableGP) = randScalableGP(Random.GLOBAL_RNG, f)
-AbstractGPs.rand(f::FiniteScalableGP,t::AbstractVecOrMat{<:Real}) = randScalableGP(Random.GLOBAL_RNG, f,t)
+AbstractGPs.rand(f::FiniteScalableGP, t::AbstractVecOrMat{<:Real}) = randScalableGP(Random.GLOBAL_RNG, f, t)
 
-
-function Distributions.logpdf(f::FiniteScalableGP, Y::AbstractVecOrMat{<:Real})
-    """
+"""
     logpdf(f::ScalableGP, Y::AbstractVecOrMat{<:Real})
 
-    Compute the log-likelihood of the data Y given the GP f.
-    """
+Compute the log-likelihood of the data Y given the GP f.
+"""
+function Distributions.logpdf(f::FiniteScalableGP, Y::AbstractVecOrMat{<:Real})
     σ2 = diag(f.Σy)
     y = Y .- f.f.f.mean.c
     return log_likelihood(f.f.kernel, f.x, y, σ2)

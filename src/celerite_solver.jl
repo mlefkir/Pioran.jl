@@ -1,11 +1,12 @@
 using Pioran: SumOfSemiSeparable
 
 """
-init_semi_separable(a, b, c, d, τ, σ2)"
+     init_semi_separable(a, b, c, d, τ, σ2)
+
 Initialise the matrices and vectors needed for the celerite algorithm.
 U,V are the rank-R matrices, D is the diagonal matrix and ϕ is the matrix of the exponential terms.
 
-See Foreman-Mackey et al. 2017 for more details.
+See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
 function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractVector,
     d::AbstractVector, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
@@ -95,9 +96,12 @@ function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractV
     end
 end
 
-""" Solve the linear system using the celerite algorithm
+""" 
+    solve_prec!(z, y, U, W, D, ϕ)
 
-See Foreman-Mackey et al. 2017 for more details.
+Forward and backward substitution of the celerite algorithm.
+
+See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
 function solve_prec!(z::AbstractVector, y::AbstractVector,
     U::AbstractMatrix, W::AbstractMatrix, D::AbstractVector, ϕ::AbstractMatrix)
@@ -142,7 +146,19 @@ function solve_prec!(z::AbstractVector, y::AbstractVector,
     return logdetD
 end
 
-""" Compute the log likelihood of the GP at the points τ given the data y and time t.
+"""
+    log_likelihood(cov, τ, y, σ2)
+
+Compute the log-likelihood of a semi-separable covariance function using the celerite algorithm.
+
+# Arguments
+- `cov::SumOfSemiSeparable`: the covariance function
+- `τ::Vector`: the time points
+- `y::Vector`: the data
+- `σ2::Vector`: the measurement variances
+
+See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
+
 """
 function log_likelihood(cov::SumOfSemiSeparable, τ::Vector, y::Vector, σ2::Vector)
 
@@ -169,7 +185,17 @@ function log_likelihood(cov::SumOfSemiSeparable, τ::Vector, y::Vector, σ2::Vec
     return -logdetD / 2 - N * log(2π) / 2 - y'z / 2
 end
 
-""" Compute the posterior mean of the GP at the points τ given the data y and time t.
+"""
+    predict(cov, τ, t, y, σ2)
+
+Compute the posterior mean of the GP at the points τ given the data y and time t.
+
+# Arguments
+- `cov::SumOfSemiSeparable`: the covariance function
+- `τ::Vector`: the time points
+- `t::Vector`: the data time points
+- `y::Vector`: the data
+- `σ2::Vector`: the measurement variances
 """
 function predict(cov::SumOfSemiSeparable, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector)
 
@@ -194,7 +220,6 @@ function predict(cov::SumOfSemiSeparable, τ::AbstractVector, t::AbstractVector,
     z = Vector{T}(undef, N)
 
     _ = solve_prec!(z, y, U, V, D, ϕ)
-
 
     Q = zeros(T, R) # same as in the paper
     μₘ = zeros(T, M)
@@ -295,7 +320,17 @@ function predict(cov::SumOfSemiSeparable, τ::AbstractVector, t::AbstractVector,
 
 end
 
+""" 
+    simulate(rng, cov, τ, σ2)
 
+Draw a realisation from the  GP with the covariance function cov at the points τ with the variances σ2.
+
+# Arguments
+- `rng::AbstractRNG`: the random number generator
+- `cov::SumOfSemiSeparable`: the covariance function
+- `τ::Vector`: the time points
+- `σ2::Vector`: the measurement variances
+"""
 function simulate(rng::AbstractRNG, cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
     """
     simulate(cov::SumOfSemiSeparable, τ::Vector, σ2::Vector)

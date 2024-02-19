@@ -2,13 +2,39 @@ using CairoMakie
 using VectorizedStatistics
 using LombScargle
 
+function get_theme()
+    tw = 1.85
+    ts = 10
+    mts = 5
+    ls = 15
+    fontsize_theme = Theme(fontsize=25, Axis=(yticksmirrored=true,
+            xticksmirrored=true,
+            xminorticksvisible=true,
+            yminorticksvisible=true,
+            xminorgridvisible=false,
+            xgridvisible=false,
+            yminorgridvisible=false,
+            ygridvisible=false,
+            xminortickalign=1,
+            yminortickalign=1,
+            xtickalign=1,
+            ytickalign=1, xticklabelsize=ls, yticklabelsize=ls,
+            xticksize=ts, xtickwidth=tw,
+            xminorticksize=mts, xminortickwidth=tw,
+            yticksize=ts, ytickwidth=tw,
+            yminorticksize=mts, yminortickwidth=tw), Lines=(
+            linewidth=2.5,))
+    return fontsize_theme
+end
 
-theme = Pioran.get_theme()
-set_theme!(theme)
+""" 
+    plot_boxplot_psd_approx(residuals, ratios; path="")
 
-""" Plot the boxplot of the residuals and ratios for the PSD approximation """
+Plot the boxplot of the residuals and ratios for the PSD approximation
+"""
 function plot_boxplot_psd_approx(residuals, ratios; path="")
-
+    theme = get_theme()
+    set_theme!(theme)
     if !ispath(path)
         mkpath(path)
     end
@@ -40,9 +66,10 @@ end
     plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
     
 Plot the quantiles of the residuals and ratios (with respect to the approximated PSD) of the PSD 
-
 """
 function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
+    theme = get_theme()
+    set_theme!(theme)
     if !ispath(path)
         mkpath(path)
     end
@@ -74,8 +101,14 @@ function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
     save(path * "quantiles_psd_approx.pdf", fig)
 end
 
-""" Plot the frequency-averaged residuals and ratios """
+""" 
+    plot_mean_approx(f, residuals, ratios; path="")
+
+Plot the frequency-averaged residuals and ratios
+"""
 function plot_mean_approx(f, residuals, ratios; path="")
+    theme = get_theme()
+    set_theme!(theme)
     if !ispath(path)
         mkpath(path)
     end
@@ -92,15 +125,27 @@ function plot_mean_approx(f, residuals, ratios; path="")
     save(path * "diagnostics_psd_approx.pdf", fig)
 end
 
-""" Check the approximation of the PSD 
+"""
+    sample_approx_model(samples, variance_samples, f0, fM, model; n_frequencies=1_000, basis_function="SHO", n_components=20)
 
-Args:
-    samples (Array{Float64, N}): The samples of the model parameters
-    variance_samples (Array{Float64, 1}): The variance samples
-    f0 (Float64): The minimum frequency
-    fM (Float64): The maximum frequency
-    model The model
+Check the approximation of the PSD by computing the residuals and the ratios of the PSD and the approximated PSD
 
+# Arguments
+- `samples::Array{Float64, n}` : The model samples
+- `variance_samples::Array{Float64, 1}` : The variance samples
+- `f0::Float64` : The minimum frequency for the approximation of the PSD
+- `fM::Float64` : The maximum frequency for the approximation of the PSD
+- `model::Function` : The model
+- `n_frequencies::Int=1_000` : The number of frequencies to use for the approximation of the PSD
+- `basis_function::String="SHO"` : The basis function for the approximation of the PSD
+- `n_components::Int=20` : The number of components to use for the approximation of the PSD
+
+# Return
+
+- `psd::Array{Float64, 2}` : The PSD
+- `psd_approx::Array{Float64, 2}` : The approximated PSD
+- `residuals::Array{Float64, 2}` : The residuals (psd-approx_psd)
+- `ratios::Array{Float64, 2}` : The ratios (approx_psd/psd)
 """
 function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequencies=1_000, basis_function="SHO", n_components=20)
     P = size(samples, 2)
@@ -119,26 +164,29 @@ function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequen
     return psd, psd_approx, residuals, ratios, f
 end
 
-""" Plot the diagnostics of the approximation of the PSD 
-    The diagnostics include the mean, quantiles and boxplot of the residuals and ratios
-
-    This function is a wrapper for the following functions:
-    - plot_mean_approx
-    - plot_quantiles_approx
-    - plot_boxplot_psd_approx
 """
-function plot_diag(f, residuals, ratios, f_min, f_max; path="")
-    plot_mean_approx(f, residuals, ratios, path=path)
-    plot_quantiles_approx(f, f_min, f_max, residuals, ratios, path=path)
-    plot_boxplot_psd_approx(residuals, ratios, path=path)
-end
+    run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="", basis_function="SHO", n_components=20)
 
-""" Run the diagnostics for the PSD approximation
+Run the prior predictive checks for the model and the approximation of the PSD
+
+# Arguments
+- `prior_samples::Array{Float64, 2}` : Model samples from the prior distribution
+- `variance_samples::Array{Float64, 1}` : The variance samples
+- `f0::Float64` : The minimum frequency for the approximation of the PSD
+- `fM::Float64` : The maximum frequency for the approximation of the PSD
+- `model::Function` : The model
+- `f_min::Float64` : The minimum frequency of the observed data
+- `f_max::Float64` : The maximum frequency of the observed data
+- `path::String=""` : The path to save the plots
+- `basis_function::String="SHO"` : The basis function for the approximation of the PSD
+- `n_components::Int=20` : The number of components to use for the approximation of the PSD
 """
 function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="", basis_function="SHO", n_components=20)
     println("Running prior predictive checks...")
     _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model, basis_function=basis_function, n_components=n_components)
-    plot_diag(f, residuals, ratios, f_min, f_max, path=path)
+    plot_mean_approx(f, residuals, ratios, path=path)
+    plot_quantiles_approx(f, f_min, f_max, residuals, ratios, path=path)
+    plot_boxplot_psd_approx(residuals, ratios, path=path)
 end
 
 
@@ -147,40 +195,23 @@ end
 
 Run the posterior predictive checks for the model and the approximation of the PSD
 
-Parameters  
-----------
-samples : Array{Float64, 2}
-    The samples of the model parameters
-paramnames : Array{String, 1}
-    The names of the parameters of the model
-t : Array{Float64, 1}
-    The time series
-y : Array{Float64, 1}
-    The values of the time series
-yerr : Array{Float64, 1}
-    The errors of the time series
-f0 : Float64
-    The minimum frequency for the approximation of the PSD
-fM : Float64
-    The maximum frequency for the approximation of the PSD
-model : Function
-    The model
-with_log_transform : Bool
-    If true, the flux is log-transformed
-plots : String or Array{String, 1}
-    The type of plots to make. It can be "all", "psd", "lsp", "timeseries" or a combination of them
-n_samples : Int
-    The number of samples to draw from the posterior predictive distribution
-path : String
-    The path to save the plots
-basis_function : String
-    The basis function for the approximation of the PSD
-n_frequencies : Int
-    The number of frequencies to use for the approximation of the PSD
-plot_f_P : Bool
-    If true, the plots are made in terms of f * PSD
-n_components : Int
-    The number of components to use for the approximation of the PSD
+# Arguments
+- `samples::Array{Float64, 2}` : The samples from the posterior distribution
+- `paramnames::Array{String, 1}` : The names of the parameters
+- `t::Array{Float64, 1}` : The time series
+- `y::Array{Float64, 1}` : The values of the time series
+- `yerr::Array{Float64, 1}` : The errors of the time series
+- `f0::Float64` : The minimum frequency for the approximation of the PSD
+- `fM::Float64` : The maximum frequency for the approximation of the PSD
+- `model::Function` : The model
+- `with_log_transform::Bool` : If true, the flux is log-transformed
+- `plots::String or Array{String, 1}` : The type of plots to make. It can be "all", "psd", "lsp", "timeseries" or a combination of them in an array
+- `n_samples::Int=200` : The number of samples to draw from the posterior predictive distribution
+- `path::String="all"` : The path to save the plots
+- `basis_function::String="SHO"` : The basis function for the approximation of the PSD
+- `n_frequencies::Int=1000` : The number of frequencies to use for the approximation of the PSD
+- `plot_f_P::Bool=false` : If true, the plots are made in terms of f * PSD
+- `n_components::Int=20` : The number of components to use for the approximation of the PSD
 """
 function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, with_log_transform; plots="all", n_samples=200, path="", basis_function="SHO", n_frequencies=1000, plot_f_P=false, n_components=20)
     println("Running posterior predictive checks...")
@@ -208,13 +239,28 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, m
 end
 
 """
-plot_psd_ppc(samples, samples_variance, f0, fM, model; path="")
+    plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO")
 
-Plot the posterior predictive power spectral density
-    
+Plot the posterior predictive power spectral density and the noise levels
+
+# Arguments
+- `samples_𝓟::Array{Float64, n}` : The samples of the model parameters
+- `samples_variance::Array{Float64, 1}` : The variance samples
+- `samples_ν::Array{Float64, 1}` : The ν samples
+- `t::Array{Float64, 1}` : The time series
+- `yerr::Array{Float64, 1}` : The errors of the time series
+- `f0::Float64` : The minimum frequency for the approximation of the PSD
+- `fM::Float64` : The maximum frequency for the approximation of the PSD
+- `model::Function` : The model
+- `plot_f_P::Bool=false` : If true, the plot is made in terms of f * PSD
+- `n_frequencies::Int=1000` : The number of frequencies to use for the approximation of the PSD
+- `n_components::Int=20` : The number of components to use for the approximation of the PSD
+- `basis_function::String="SHO"` : The basis function for the approximation of the PSD
+- `path::String=""` : The path to save the plots
+
 """
-function plot_psd_ppc(samples, samples_variance, samples_ν, t, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO")
-    theme = Pioran.get_theme()
+function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO")
+    theme = get_theme()
     set_theme!(theme)
 
     if !ispath(path)
@@ -238,9 +284,9 @@ function plot_psd_ppc(samples, samples_variance, samples_ν, t, yerr, f0, fM, mo
     P = size(samples_variance, 1)
     spectral_points, _ = Pioran.build_approx(n_components, f0, fM, basis_function=basis_function)
 
-    psd, psd_approx, _, _, f = sample_approx_model(samples', samples_variance, f0, fM, model, n_frequencies=n_frequencies, basis_function=basis_function, n_components=n_components)
+    psd, psd_approx, _, _, f = sample_approx_model(samples_𝓟', samples_variance, f0, fM, model, n_frequencies=n_frequencies, basis_function=basis_function, n_components=n_components)
 
-    amplitudes = [Pioran.get_approx_coefficients.(Ref(model(samples[k, :]...)), f0, fM, basis_function=basis_function, n_components=n_components) for k in 1:P]
+    amplitudes = [Pioran.get_approx_coefficients.(Ref(model(samples_𝓟[k, :]...)), f0, fM, basis_function=basis_function, n_components=n_components) for k in 1:P]
     amplitudes = mapreduce(permutedims, vcat, amplitudes)'
 
     psd_m = psd ./ sum(amplitudes .* spectral_points, dims=1)
@@ -311,14 +357,33 @@ function plot_psd_ppc(samples, samples_variance, samples_ν, t, yerr, f0, fM, mo
 end
 
 """
-    plot_ppc_lsp(samples_𝓟,samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="")
+    plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="", basis_function="SHO")
 
-Plot the posterior predictive Lomb-Scargle periodogram
+Plot the posterior predictive Lomb-Scargle periodogram of random time series from the model and samples
+
+# Arguments
+- `samples_𝓟::Array{Float64, n}` : The samples of the model parameters
+- `samples_variance::Array{Float64, 1}` : The variance samples
+- `samples_ν::Array{Float64, 1}` : The ν samples
+- `samples_μ::Array{Float64, 1}` : The μ samples
+- `t::Array{Float64, 1}` : The time series
+- `y::Array{Float64, 1}` : The values of the time series
+- `yerr::Array{Float64, 1}` : The errors of the time series
+- `f0::Float64` : The minimum frequency for the approximation of the PSD
+- `fM::Float64` : The maximum frequency for the approximation of the PSD
+- `model::Function` : The model
+- `plot_f_P::Bool=false` : If true, the plot is made in terms of f * PSD
+- `n_frequencies::Int=1000` : The number of frequencies to use for the approximation of the PSD
+- `n_samples::Int=1000` : The number of samples to draw from the posterior predictive distribution
+- `n_components::Int=20` : The number of components to use for the approximation of the PSD
+- `bin_fact::Int=10` : The binning factor for the LSP
+- `path::String=""` : The path to save the plots
+- `basis_function::String="SHO"` : The basis function for the approximation of the PSD
 
 """
 function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="", basis_function="SHO")
     #set theme and create output directory
-    theme = Pioran.get_theme()
+    theme = get_theme()
     set_theme!(theme)
     if !ispath(path)
         mkpath(path)
@@ -420,13 +485,10 @@ end
 
 """ 
     get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr,f0,fM, model,with_log_transform;samples_c=missing, n_samples=1000, path="")
+
+Get the random posterior predictive time series from the model and samples 
 """
-function get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred=nothing, samples_c=nothing, n_samples=1000, n_components=20, basis_function="SHO", path="")
-    theme = Pioran.get_theme()
-    set_theme!(theme)
-    if !ispath(path)
-        mkpath(path)
-    end
+function get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred=nothing, samples_c=nothing, n_samples=1000, n_components=20, basis_function="SHO")
     P = n_samples
 
     if isnothing(samples_ν)
@@ -479,10 +541,17 @@ function get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_
     return ts_array, t_pred
 end
 
-""" Plot the residuals and the autocorrelation function of the residuals 
-    
+""" 
     plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_intervals=[95, 99], path="")
 
+Plot the residuals and the autocorrelation function of the residuals 
+    
+# Arguments
+- `t::Vector{Float64}` : The time series
+- `mean_res::Vector{Float64}` : The mean of the residuals
+- `res_quantiles::Array{Float64, 2}` : The quantiles of the residuals
+- `confidence_intervals::Array{Int, 1}` : The confidence intervals
+- `path::String=""` : The path to save the plot
 """
 function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_intervals=[95, 99], path="")
 
@@ -535,7 +604,19 @@ function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_inter
     # return fig
 end
 
-""" Plot the posterior predictive time series """
+"""
+    plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr; path="")
+
+Plot the posterior predictive simulated time series
+
+# Arguments
+- `t_pred::Vector{Float64}` : The prediction times
+- `ts_quantiles::Array{Float64, 2}` : The quantiles of the posterior predictive time series
+- `t::Vector{Float64}` : The time series
+- `y::Vector{Float64}` : The values of the time series
+- `yerr::Vector{Float64}` : The errors of the time series
+- `path::String=""` : The path to save the plot
+"""
 function plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr; path="")
 
     fig = Figure(size=(800, 400))
@@ -565,8 +646,33 @@ end
     plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred=nothing, samples_c=nothing, n_samples=100, n_components=20, basis_function="SHO", path="")
 
 Plot the posterior predictive time series and the residuals 
+
+# Arguments
+- `samples_𝓟::Matrix{Float64}` : The samples of the model parameters
+- `samples_variance::Vector{Float64}` : The variance samples
+- `samples_ν::Vector{Float64}` : The noise level samples
+- `samples_μ::Vector{Float64}` : The mean samples
+- `t::Vector{Float64}` : The time series
+- `y::Vector{Float64}` : The values of the time series
+- `yerr::Vector{Float64}` : The errors of the time series
+- `f0::Float64` : The minimum frequency for the approximation of the PSD
+- `fM::Float64` : The maximum frequency for the approximation of the PSD
+- `model::PowerSpectralDensity` : The model
+- `with_log_transform::Bool` : If true, the flux was log-transformed for the inference
+- `t_pred::Vector{Float64}=nothing` : The prediction times
+- `samples_c::Vector{Float64}=nothing` : The samples of the constant (if the flux was log-transformed)
+- `n_samples::Int=100` : The number of samples to draw from the posterior predictive distribution
+- `n_components::Int=20` : The number of components to use for the approximation of the PSD
+- `basis_function::String="SHO"` : The basis function for the approximation of the PSD
+
+
 """
 function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred=nothing, samples_c=nothing, n_samples=100, n_components=20, basis_function="SHO", path="")
+    theme = get_theme()
+    set_theme!(theme)
+    if !ispath(path)
+        mkpath(path)
+    end
     # get the posterior predictive time series and the prediction times
     ts_array, t_pred = get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, t_pred=t_pred, samples_c=samples_c, n_samples=n_samples, n_components=n_components, basis_function=basis_function, path=path)
     # find the indexes of the observed data in the prediction times for the residuals

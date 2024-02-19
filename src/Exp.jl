@@ -1,40 +1,40 @@
-
 using Pioran: SemiSeparable
-""" Exp model """
 
-"""
-    Exp(σ,α)
+@doc raw"""
+    Exp(A,α)
 
-Construct a exponential covariance function with parameters σ, α.
-Where σ is the amplitude and α is the decay rate.
+Exponential covariance Function
+
+- `A`: the amplitude of the covariance function
+- `α`: the decay rate of the covariance function
+
+```math
+k(τ) = A \exp(-α τ)
+```
 
 """
 struct Exp <: SemiSeparable
-    σ
+    A
     α
 end
 
 """ Define the kernel functions for the Exp model """
-KernelFunctions.kappa(R::Exp, τ::Real) = Exp_covariance(τ, R.σ, R.α)
+KernelFunctions.kappa(R::Exp, τ::Real) = Exp_covariance(τ, R.A, R.α)
 KernelFunctions.metric(R::Exp) = Euclidean()
-KernelFunctions.ScaledKernel(R::Exp, number::Real=1.0) = Exp(number * R.σ, R.α)
+KernelFunctions.ScaledKernel(R::Exp, number::Real=1.0) = Exp(number * R.A, R.α)
 
-"""
-    Return the celerite coefficients for an Exp covariance function.
-"""
 function celerite_coefs(covariance::Exp)
-    a = covariance.σ
+    a = covariance.A
     c = covariance.α
     return [a, 0.0, c, 0.0]
 end
 
 
 """
-Exp_covariance(τ, σ, α)
+Exp_covariance(τ, A, α)
 
-Compute the covariance function for an exponential with parameters σ, α at time τ.
-Where σ is the amplitude and α is the decay rate.
+Compute the covariance function for an exponential with parameters σ, A at time τ.
 """
-function Exp_covariance(τ, σ, α)
-    return σ * exp.(-α .* τ)
+function Exp_covariance(τ, A, α)
+    return A * exp.(-α .* τ)
 end

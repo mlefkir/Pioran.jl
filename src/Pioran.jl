@@ -13,7 +13,12 @@ using DelimitedFiles
 using StatsBase
 using ProgressMeter
 
-export SHO, Celerite, Exp, ScalableGP, posterior, SingleBendingPowerLaw, DoubleBendingPowerLaw, DoubleBendingPowerLaw_Bis, approx, log_likelihood, plot_mean_approx, plot_quantiles_approx, plot_boxplot_psd_approx, run_diagnostics, extract_subset, plot_ppc_timeseries, run_posterior_predict_checks,calculate
+export SHO, Celerite, Exp
+export SingleBendingPowerLaw, DoubleBendingPowerLaw, DoubleBendingPowerLaw_Bis, approx
+export ScalableGP, posterior,  log_likelihood
+export run_diagnostics,run_posterior_predict_checks, extract_subset
+export sample_approx_model
+
 include("acvf.jl")
 include("SHO.jl")
 include("Celerite.jl")
@@ -23,7 +28,5 @@ include("celerite_solver.jl")
 include("direct_solver.jl")
 include("scalable_GP.jl")
 include("utils.jl")
-include("plots.jl")
 include("plots_diagnostics.jl")
-
 end

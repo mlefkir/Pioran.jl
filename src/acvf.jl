@@ -23,6 +23,8 @@ struct SumOfSemiSeparable{Tcov<:Vector{<:SemiSeparable},T<:Vector{<:Real}} <: Se
 end
 
 """
+     +(::SemiSeparable, ::SemiSeparable)
+
     Sum of semi-separable covariance functions
 """
 function Base.:+(cov1::SemiSeparable, cov2::SemiSeparable)
@@ -65,7 +67,9 @@ function Base.:+(cov1::SemiSeparable, cov2::SemiSeparable)
 end
 
 """
-    Return the celerite coefficients for a semi-separable covariance function.
+     celerite_coefs(covariance)
+
+    Get the celerite coefficients
 """
 function celerite_coefs(covariance::SumOfSemiSeparable)
     J = length(covariance.cov)
@@ -79,10 +83,10 @@ function celerite_coefs(covariance::SumOfSemiSeparable)
     return a, b, c, d
 end
 
-"""Define the metric for the semi-separable covariance function."""
+# Define the kernel functions for the SumOfSemiSeparable model
 KernelFunctions.metric(R::SumOfSemiSeparable) = Euclidean()
 
-"""Define the total covariance function for the semi-separable covariance function."""
+# Define the kernel functions for the SumOfSemiSeparable model
 function KernelFunctions.kappa(R::SumOfSemiSeparable, τ::Real)
     J = length(R.cov)
     K = KernelFunctions.kappa(R.cov[1], τ)
@@ -92,7 +96,7 @@ function KernelFunctions.kappa(R::SumOfSemiSeparable, τ::Real)
     return K
 end
 
-"""Define the scaled semi-separable covariance function."""
+# Define the kernel functions for the SumOfSemiSeparable model
 function KernelFunctions.ScaledKernel(R::SumOfSemiSeparable, number::Real=1.0)
 
     J = length(R.cov)
