@@ -60,6 +60,8 @@ function plot_boxplot_psd_approx(residuals, ratios; path="")
     boxplot!(ax2, x, y2, show_outliers=true)
 
     save(path * "boxplot_psd_approx.pdf", fig)
+    save(path * "boxplot_psd_approx.png", fig)
+    return fig
 end
 
 """
@@ -99,6 +101,8 @@ function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path="")
         fontsize=10,
         framevisible=false)
     save(path * "quantiles_psd_approx.pdf", fig)
+    save(path * "quantiles_psd_approx.png", fig)
+    return fig
 end
 
 """ 
@@ -123,6 +127,8 @@ function plot_mean_approx(f, residuals, ratios; path="")
     hlines!(ax2, 1, color=:red, linestyle=:dash)
     hlines!(ax1, 0, color=:red, linestyle=:dash)
     save(path * "diagnostics_psd_approx.pdf", fig)
+    save(path * "diagnostics_psd_approx.png", fig)
+    return fig
 end
 
 """
@@ -184,9 +190,10 @@ Run the prior predictive checks for the model and the approximation of the PSD
 function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="", basis_function="SHO", n_components=20)
     println("Running prior predictive checks...")
     _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model, basis_function=basis_function, n_components=n_components)
-    plot_mean_approx(f, residuals, ratios, path=path)
-    plot_quantiles_approx(f, f_min, f_max, residuals, ratios, path=path)
-    plot_boxplot_psd_approx(residuals, ratios, path=path)
+    fig1 = plot_mean_approx(f, residuals, ratios, path=path)
+    fig2 = plot_quantiles_approx(f, f_min, f_max, residuals, ratios, path=path)
+    fig3 = plot_boxplot_psd_approx(residuals, ratios, path=path)
+    return [fig1, fig2, fig3]
 end
 
 
@@ -219,17 +226,17 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, m
 
     if plots == "all"
         println("Plotting the posterior predictive power spectral density")
-        plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components,n_frequencies=n_frequencies)
+        plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies)
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
-        plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components,n_frequencies=n_frequencies)
+        plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components, n_frequencies=n_frequencies)
         println("Plotting the posterior predictive time series")
         plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
     elseif "psd" ∈ plots
         println("Plotting the posterior predictive power spectral density")
-        plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components,n_frequencies=n_frequencies)
+        plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies)
     elseif "lsp" ∈ plots
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
-        plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components,n_frequencies=n_frequencies)
+        plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components, n_frequencies=n_frequencies)
     elseif "timeseries" ∈ plots
         println("Plotting the posterior predictive time series")
         plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)

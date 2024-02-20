@@ -253,6 +253,14 @@ Approximate the PSD with a sum of basis functions to form a covariance function
 
 # Return
 - `covariance::SumOfSemiSeparable`: the covariance function
+
+# Example
+```julia
+using Pioran
+𝓟 = SingleBendingPowerLaw(1.0, 1.0, 2.0)
+𝓡 = approx(𝓟, 1e-4, 1e-1, 30, 2.31,basis_function="SHO")
+```
+
 """
 function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64=20, var::Real=1.0; basis_function::String="SHO")
 
