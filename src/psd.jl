@@ -201,24 +201,40 @@ Return the approximated PSD. This is essentially to check that the model and the
 - `n_components::Integer=20`: the number of basis functions to use
 - `var::Real=1.0`: the variance of the process, integral of the PSD
 - `basis_function::String="SHO"`: the basis function to use, either "SHO" or "DRWCelerite"
+- `individual::Bool=false`: return the individual components
 """
-function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64=20, var::Real=1.0, basis_function::String="SHO")
+function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64=20, var::Real=1.0, basis_function::String="SHO", individual=false)
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function=basis_function)
     psd_normalised = get_normalised_psd(psd_model, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
-    psd = zeros(length(f))
-    if basis_function == "SHO"
-        for i in 1:n_components
-            psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
-        end
-    elseif basis_function == "DRWCelerite"
-        for i in 1:n_components
-            psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
+
+    if individual
+        psd = zeros(length(f), n_components)
+        if basis_function == "SHO"
+            for i in 1:n_components
+                psd[:, i] = amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
+            end
+        elseif basis_function == "DRWCelerite"
+            for i in 1:n_components
+                psd[:, i] = amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
+            end
+        else
+            error("Basis function" * basis_function * "not implemented")
         end
     else
-        error("Basis function" * basis_function * "not implemented")
+        psd = zeros(length(f))
+        if basis_function == "SHO"
+            for i in 1:n_components
+                psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
+            end
+        elseif basis_function == "DRWCelerite"
+            for i in 1:n_components
+                psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
+            end
+        else
+            error("Basis function" * basis_function * "not implemented")
+        end
     end
-
     return psd
 end
 
