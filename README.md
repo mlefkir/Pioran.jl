@@ -1,3 +1,5 @@
-# Pioran
+![Banner of pioran](./docs/src/assets/banner_desc.svg)
 
-[![Build Status](https://github.com/mlefkir/Pioran.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/mlefkir/Pioran.jl/actions/workflows/CI.yml?query=branch%3Amain)
+## Installation
+
+## Quick start
