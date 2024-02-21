@@ -71,12 +71,13 @@ function extract_subset(rng, prefix, t, y, yerr; n_perc=0.03, take_log=true)
 end
 
 
-""" separate_samples(samples,paramnames,with_log_transform)
+"""
+    separate_samples(samples, paramnames, with_log_transform::Bool)
 
-Separate the samples into the parameters of the model and the PSD parameters.
+Separate the samples into the parameters of the model and the parameters of the power spectral density.
 
 """
-function separate_samples(samples,paramnames,with_log_transform)
+function separate_samples(samples,paramnames,with_log_transform::Bool)
     
     # try to find all the parameters except the PSD parameters
     # nu

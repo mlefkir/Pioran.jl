@@ -1,7 +1,7 @@
 using Pioran: SemiSeparable
 
 @doc raw"""
-    Exp(A,α)
+    Exp(A, α)
 
 Exponential covariance Function
 
@@ -12,13 +12,16 @@ Exponential covariance Function
 k(τ) = A \exp(-α τ)
 ```
 
+# Example
+```julia
+Exp(1.0, 0.25)
+```
 """
 struct Exp <: SemiSeparable
     A
     α
 end
 
-""" Define the kernel functions for the Exp model """
 KernelFunctions.kappa(R::Exp, τ::Real) = Exp_covariance(τ, R.A, R.α)
 KernelFunctions.metric(R::Exp) = Euclidean()
 KernelFunctions.ScaledKernel(R::Exp, number::Real=1.0) = Exp(number * R.A, R.α)
@@ -30,11 +33,6 @@ function celerite_coefs(covariance::Exp)
 end
 
 
-"""
-Exp_covariance(τ, A, α)
-
-Compute the covariance function for an exponential with parameters σ, A at time τ.
-"""
 function Exp_covariance(τ, A, α)
     return A * exp.(-α .* τ)
 end
