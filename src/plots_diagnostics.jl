@@ -491,7 +491,7 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
 end
 
 """ 
-    get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr,f0,fM, model,with_log_transform;samples_c=missing, n_samples=1000, path="")
+    get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr,f0,fM, model,with_log_transform;samples_c=missing, n_samples=1000)
 
 Get the random posterior predictive time series from the model and samples 
 """
@@ -681,7 +681,7 @@ function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples
         mkpath(path)
     end
     # get the posterior predictive time series and the prediction times
-    ts_array, t_pred = get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, t_pred=t_pred, samples_c=samples_c, n_samples=n_samples, n_components=n_components, basis_function=basis_function, path=path)
+    ts_array, t_pred = get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, t_pred=t_pred, samples_c=samples_c, n_samples=n_samples, n_components=n_components, basis_function=basis_function)
     # find the indexes of the observed data in the prediction times for the residuals
     indexes = [findall(t_pred -> t_pred == t_i, t_pred)[1] for t_i in t]
 
