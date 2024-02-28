@@ -18,6 +18,7 @@ export SingleBendingPowerLaw, DoubleBendingPowerLaw, DoubleBendingPowerLaw_Bis, 
 export ScalableGP, posterior,  log_likelihood
 export run_diagnostics,run_posterior_predict_checks, extract_subset
 export sample_approx_model
+export UniformDependent
 
 include("acvf.jl")
 include("SHO.jl")
@@ -29,4 +30,5 @@ include("direct_solver.jl")
 include("scalable_GP.jl")
 include("utils.jl")
 include("plots_diagnostics.jl")
+include("priors.jl")
 end
