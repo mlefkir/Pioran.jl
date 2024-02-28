@@ -1,4 +1,4 @@
-# Getting Started
+# Getting started
 
 As `Pioran` is written in Julia, you need to install Julia first. Please refer to [the official website](https://julialang.org/downloads/) for the installation.
 
@@ -7,7 +7,7 @@ As `Pioran` is written in Julia, you need to install Julia first. Please refer t
 Once Julia is installed, you can install `Pioran` by running the following command in the Julia REPL:
 
 ```julia
-] add Pioran
+import Pkg; Pkg.add("Pioran")
 ```
 
 ## Usage
@@ -16,16 +16,14 @@ Once Julia is installed, you can install `Pioran` by running the following comma
 using Pioran
 ```
 
-Assuming you have a time series `y`  indexed by `t` and with measurement noise `yerr`
+Assuming you have a time series `y`  with measurement error `yerr` and indexed by time `t`.
 
 ```@example getting_started
-using DelimitedFiles
+using DelimitedFiles # hide
 using Plots
-A = readdlm("data/simu.txt",comments=true)
-t, y, yerr = A[:,1], A[:,2], A[:,3]
-σ² = yerr .^ 2 
-
-
+A = readdlm("data/simu.txt",comments=true) # hide
+t, y, yerr = A[:,1], A[:,2], A[:,3] # hide
+σ² = yerr .^ 2  # hide
 scatter(t, y,yerr=yerr, label="data",xlabel="Time (days)",ylabel="Value",legend=false,framestyle = :box,ms=3)
 ```
 
@@ -50,11 +48,11 @@ plot(τ, 𝓡.(τ,0.), label="Covariance function",xlabel="Time lag (days)",ylab
 We can now build a Gaussian process $f$ which uses the quasi-separable struct of the covariance function to speed up the computations. If the mean of the process $\mu$ is known, it can be given as an argument. Otherwise, the mean is assumed to be zero.
 
 ```@example getting_started
-μ = 1.3
+μ = 1.3 
 f = ScalableGP(μ, 𝓡)
 ```
 
-We can obtain the log-likelihood of the Gaussian process given the data and the measurement noise using the function `logpdf` from the `Distributions` package.
+We can compute the log-likelihood of the Gaussian process given data `y`, times `t` and measurement variances `σ²` using the function `logpdf` from the `Distributions` package.
 ```@example getting_started
 using Distributions
 logpdf(f(t, σ²), y)

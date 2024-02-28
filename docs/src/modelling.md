@@ -1,11 +1,11 @@
-# Modelling
+# Modelling and simulations
 
-PSD 
 
-## Bending power-laws
 
-single,double power-law
+## Sampling from the Gaussian process
 
-## Approximation
+## Conditionning the Gaussian process
 
-diagnostics pre-inference
+### Sampling from the conditioned distribution
+
+## Predictions

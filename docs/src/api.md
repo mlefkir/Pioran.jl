@@ -72,6 +72,7 @@ Pages = ["plots_diagnostics.jl"]
 Private = false
 Order   = [:function]
 ```
+
 ### Individual plotting functions
 ```@autodocs
 Modules = [Pioran]
@@ -84,6 +85,13 @@ Order   = [:function]
 
 ```@autodocs
 Modules = [Pioran]
-Pages = ["utilities.jl"]
+Pages = ["utils.jl"]
+Order   = [:function]
+```
+
+### Prior distributions
+```@autodocs
+Modules = [Pioran]
+Pages = ["priors.jl"]
 Order   = [:type, :function]
 ```

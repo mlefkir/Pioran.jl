@@ -1,4 +1,4 @@
-# Inference with Turing.jl
+# Hamiltonian Monte Carlo with Turing.jl
 
 ## Modelling function
 
