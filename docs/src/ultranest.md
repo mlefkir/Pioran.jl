@@ -138,7 +138,7 @@ mpiexec -n 4 julia script.jl
 using Markdown
 Markdown.parse("""
 ```julia
-$(read("./../../examples/single_pl.jl",String))
+$(read("../../examples/single_pl.jl",String))
 ```
 """)
 ````
