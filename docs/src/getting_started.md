@@ -27,7 +27,7 @@ t, y, yerr = A[:,1], A[:,2], A[:,3] # hide
 scatter(t, y,yerr=yerr, label="data",xlabel="Time (days)",ylabel="Value",legend=false,framestyle = :box,ms=3)
 ```
 
-Let's assume we can model power spectrum with a single bending power-law.
+Let's assume we can model the power spectrum with a single-bending power-law.
 ```@example getting_started
 α₁, f₁, α₂ = 0.3, 0.03, 3.2
 𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
@@ -35,7 +35,7 @@ f = 10 .^ range(-3, stop=3, length=1000)
 plot(f, 𝓟.(f), label="Single Bending Power Law",xlabel="Frequency (day^-1)",ylabel="Power Spectral Density",legend=true,framestyle = :box,xscale=:log10,yscale=:log10)
 ```
 To compute the corresponding covariance function, we approximate the power spectral density by a sum of `SHO` power spectral densities. 
-We need to specify the frequency range `f0` and `fM` over which the approximation is performed. The `variance` of the process - integral of the power spectrum can also be given.
+We need to specify the frequency range `f0` and `fM` over which the approximation is performed. The `variance` of the process - or the integral of the power spectrum can also be given.
 
 ```@example getting_started
 f0, fM = 1e-3, 1e3
