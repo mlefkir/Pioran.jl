@@ -15,10 +15,10 @@ using ProgressMeter
 
 export SHO, Celerite, Exp
 export SingleBendingPowerLaw, DoubleBendingPowerLaw, DoubleBendingPowerLaw_Bis, approx
-export ScalableGP, posterior,  log_likelihood
-export run_diagnostics,run_posterior_predict_checks, extract_subset
+export ScalableGP, posterior, log_likelihood, mean, cov, std
+export run_diagnostics, run_posterior_predict_checks, extract_subset
 export sample_approx_model
-export UniformDependent
+export TwoUniformDependent, TwoLogUniformDependent, ThreeUniformDependent
 
 include("acvf.jl")
 include("SHO.jl")
