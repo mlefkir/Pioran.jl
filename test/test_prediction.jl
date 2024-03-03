@@ -3,7 +3,6 @@ using DelimitedFiles
 using Pioran, Test
 using Distributions
 using Statistics
-using ForwardDiff
 using Random
 
 A = readdlm("data/simu.txt")

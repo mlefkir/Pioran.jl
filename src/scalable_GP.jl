@@ -64,10 +64,31 @@ function _predict_cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
     return predict_cov(K, τ, x, σ2)
 end
 
+"""
+    mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
+    mean(fp::PosteriorGP)
+
+Compute the mean of the posterior GP at the points τ.
+
+"""
 AbstractGPs.mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = _predict_mean(fp, τ)
 AbstractGPs.mean(fp::PosteriorGP) = _predict_mean(fp, fp.f.x)
+"""
+    cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
+    cov(fp::PosteriorGP)
+
+Compute the covariance of the posterior GP at the points τ.
+"""
 AbstractGPs.cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = _predict_cov(fp, τ)
 AbstractGPs.cov(fp::PosteriorGP) = _predict_cov(fp, fp.f.x)
+"""
+    std(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
+    std(fp::PosteriorGP)
+
+Compute the standard deviation of the posterior GP at the points τ.
+"""
+AbstractGPs.std(fp::PosteriorGP) = sqrt.(diag(_predict_cov(fp, fp.f.x)))
+AbstractGPs.std(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = sqrt.(diag(_predict_cov(fp, τ)))
 
 function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int64=1)
     """
@@ -99,6 +120,7 @@ end
 
 AbstractGPs.rand(fp::PosteriorGP, N::Int64) = AbstractGPs.rand(Random.GLOBAL_RNG, fp, N)
 AbstractGPs.rand(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int64) = AbstractGPs.rand(Random.GLOBAL_RNG, fp, τ, N)
+AbstractGPs.rand(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = AbstractGPs.rand(Random.GLOBAL_RNG, fp, τ, 1)
 
 
 function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP)
