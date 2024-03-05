@@ -55,7 +55,7 @@ We can compute the posterior distribution of the Gaussian process given the obse
 ```@example drawing_samples
 fp = posterior(fx, y_obs) # Posterior distribution
 ```
-The mean and standard deviation of this distribution, can be computed using the [`mean`](@ref) and [`std`](@ref) functions. The posterior covaqriance matrix can be computed using the [`cov`](@ref) function.
+The mean and standard deviation of this distribution, can be computed using the [`mean`](@ref) and [`std`](@ref) functions. The posterior covariance matrix can be computed using the [`cov`](@ref) function.
 
 ```@example drawing_samples
 m = mean(fp,t);

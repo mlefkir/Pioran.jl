@@ -1,6 +1,6 @@
 # Nested sampling with ultranest
 
-In this example, we show how to use the Python package `ultranest`[^1] to perform inference on a simple model with nested sampling. We also show how to use the `ultranest` package with MPI to parallelise the sampling on multiple processes.
+In this example, we show how to use the Python package [`ultranest`](https://johannesbuchner.github.io/UltraNest/index.html) to perform inference on a simple model with nested sampling. We also show how to use the `ultranest`[^1] package with MPI to parallelise the sampling on multiple processes.
 
 ## Installation
 
@@ -64,11 +64,6 @@ The following lines of code can be used to initialise MPI in a Julia script:
 using MPI
 MPI.Init()
 ```
-Then the code can be run with the following command:
-```bash
-mpiexec -n 4 julia script.jl
-```
-where `4` is the number of processes to use.
 
 ## Modelling with ultranest
 
@@ -76,7 +71,7 @@ We assume the reader is familiar with nested sampling and the `ultranest` packag
 
 ### Priors
 
-Priors are defined using the `quantile` function and probability distributions from the `Distributions` package. The `prior_transform` function is then used to transform the unit cube to the prior space as shown in the following example:
+Priors are defined using the `quantile` function and probability distributions from the [`Distributions`](https://juliastats.org/Distributions.jl/stable/) package. The `prior_transform` function is then used to transform the unit cube to the prior space as shown in the following example:
 
 ```julia
 using Distributions
@@ -128,9 +123,11 @@ sampler.plot()
 
 ### Parallel sampling with MPI
 
+If you want to parallelise the sampling with MPI to speed-up the computation, follow the steps presented before and run the script with the following command:
 ```bash
 mpiexec -n 4 julia script.jl
 ```
+where `4` is the number of processes to use.
 
 ## Full example
 

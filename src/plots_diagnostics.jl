@@ -220,29 +220,34 @@ Run the posterior predictive checks for the model and the approximation of the P
 - `plot_f_P::Bool=false` : If true, the plots are made in terms of f * PSD
 - `n_components::Int=20` : The number of components to use for the approximation of the PSD
 """
-function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, with_log_transform; plots="all", n_samples=200, path="", basis_function="SHO", n_frequencies=1000, plot_f_P=false, n_components=20)
+function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, with_log_transform; plots="all", n_samples=100, path="", basis_function="SHO", n_frequencies=1000, plot_f_P=false, n_components=20)
     println("Running posterior predictive checks...")
     samples_𝓟, samples_variance, samples_ν, samples_μ, samples_c = separate_samples(samples, paramnames, with_log_transform)
-
+    figs = []
     if plots == "all"
         println("Plotting the posterior predictive power spectral density")
-        plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies)
+        fig1 = plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies)
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
-        plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components, n_frequencies=n_frequencies)
+        fig2 = plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components, n_frequencies=n_frequencies)
         println("Plotting the posterior predictive time series")
-        plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
+        fig3,fig4 = plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
+        push!(figs, fig1, fig2, fig3, fig4)
     elseif "psd" ∈ plots
         println("Plotting the posterior predictive power spectral density")
-        plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies)
+        fig = plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies)
+        push!(figs, fig)
     elseif "lsp" ∈ plots
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
-        plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components, n_frequencies=n_frequencies)
+        fig = plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components, n_frequencies=n_frequencies)
+        push!(figs, fig)
     elseif "timeseries" ∈ plots
         println("Plotting the posterior predictive time series")
-        plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
+        fig1,fig2 = plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
+        push!(figs, fig1, fig2)
     else
         error("The plots argument is not valid")
     end
+    return figs
 end
 
 """
@@ -361,6 +366,7 @@ function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, f
         writedlm(f, a)
     end
     save(path * "psd_ppc.pdf", fig)
+    return fig
 end
 
 """
@@ -486,8 +492,8 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
         fontsize=10, nbanks=2,
         framevisible=false)
 
-    fig
     save(path * "LSP_ppc.pdf", fig)
+    return fig
 end
 
 """ 
@@ -606,9 +612,9 @@ function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_inter
 
     band!(ax3, lags, sigs[1] * ones(length(lags)) / sqrt(length(t)), -sigs[1] * ones(length(lags)) / sqrt(length(t)), color=(:black, 0.1), label="95%")
     band!(ax3, lags, sigs[2] * ones(length(lags)) / sqrt(length(t)), -sigs[2] * ones(length(lags)) / sqrt(length(t)), color=(:black, 0.1), label="99%")
-    fig
+    
     save(path * "residuals_diagnostics.pdf", fig)
-    # return fig
+    return fig
 end
 
 """
@@ -644,9 +650,8 @@ function plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr; path="")
         halign=:center, valign=:bottom,
         fontsize=10, nbanks=1,
         framevisible=false)
-    fig
     save(path * "TS_ppc.pdf", fig)
-    # return fig
+    return fig
 end
 
 """ 
@@ -691,8 +696,8 @@ function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples
     mean_res = mean(res, dims=2)
 
 
-    plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr, path=path)
-    plot_residuals_diagnostics(t, mean_res, res_quantiles, path=path)
+    fig1 = plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr, path=path)
+    fig2 = plot_residuals_diagnostics(t, mean_res, res_quantiles, path=path)
 
     ts_quantiles = mapreduce(permutedims, vcat, ts_quantiles)
     writedlm(path * "ppc_timeseries_quantiles.txt", ts_quantiles)
@@ -700,5 +705,5 @@ function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples
     writedlm(path * "ppc_residuals_quantiles.txt", res_quantiles)
     writedlm(path * "ppc_residuals_mean.txt", mean_res)
     writedlm(path * "ppc_t_pred.txt", t_pred)
-
+    return fig1, fig2
 end

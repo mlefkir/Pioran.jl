@@ -115,24 +115,27 @@ We can then use the function [`run_diagnostics`](@ref) to assess the quality of 
 The first argument is an array containing the parameters of the power spectral density, the second argument is the variance of the process. `f_min` and `f_max` are the minimum and maximum frequencies of the time series, this is to show the window of observed frequencies in the plots.
 
 ```@example modelling
+using CairoMakie
+CairoMakie.activate!(type = "png")
 f_min, f_max = 1e-3 * 5, 1e3 / 5
 figs = run_diagnostics(priors[1:3, :], priors[4, :], f0, fM, SingleBendingPowerLaw, f_min,f_max, n_components=20, basis_function="SHO")
 ```
-
 The following plots are produced:
 The mean of the residuals and ratios as a function of frequency.
-```@raw html
-<img src="diagnostics_psd_approx.png" width="75%",alt="Mean of the residuals and ratios as a function of frequency."/>
+```@example modelling
+figs[1]# hide
 ```
+
 The quantiles of the residuals and ratios as a function of frequency. 
-```@raw html
-<img src="quantiles_psd_approx.png" width="75%" ,alt="Quantiles of the residuals and ratios as a function of frequency."/>
+```@example modelling
+figs[2]# hide
 ```
 The distribution of the mean, median and maximum values of the frequency-averaged residuals and ratios.
-```@raw html
-<img src="boxplot_psd_approx.png" width="75%" ,alt="Distribution of the mean, median and maximum values of the frequency-averaged residuals and ratios."/>
+```@example modelling
+figs[3] # hide
 ```
-Using these three diagnostics we can see that a `SingleBendingPowerLaw` with parameters in the range of the chosen prior distribution can be well approximated.
+
+Using these three diagnostics we can see that a `SingleBendingPowerLaw` with the chosen prior distributions can be well approximated with 20 SHO basis functions.
 
 
 ## Building the Gaussian process
