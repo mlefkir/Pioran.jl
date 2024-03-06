@@ -22,6 +22,16 @@ VectorizedStatistics = "3b853605-1c98-4422-8364-4bd93ee0529e"
 
 [compat]
 ProgressMeter = "1"
+StatsBase = "0.34"
+KernelFunctions = "0.10"
+Turing = "0.30"
+CairoMakie = "0.11"
+VectorizedStatistics = "0.5"
+BenchmarkTools = "1"
+DelimitedFiles = "1"
+Distances = "0.10"
+ForwardDiff = "0.10"
+AbstractGPs = "0.5"
 julia = "1"
 
 [extras]
