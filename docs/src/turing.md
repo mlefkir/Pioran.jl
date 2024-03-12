@@ -72,15 +72,15 @@ end
 ```
 ## Sampling
 
-Once the model is defined, we can choose a sampler. Here we use the No-U-Turn Sampler (NUTS) which is a variant of Hamiltonian Monte Carlo (HMC). In `Turing.jl` we can define the sampler with a $0.65\%$ target acceptance probability as follows:
+Once the model is defined, we can choose a sampler. Here we use the No-U-Turn Sampler (NUTS) which is a variant of Hamiltonian Monte Carlo (HMC). In `Turing.jl` we can define the sampler with $0.8$  as target acceptance probability as follows:
 
 ```julia
-sampler = NUTS(0.65)
+sampler = NUTS(0.8)
 ```
 or we can use the `AdvancedHMC.jl` package to define the sampler as follows:
 ```julia
 using AdvancedHMC
-tap = 0.65 #target acceptance probability
+tap = 0.8 #target acceptance probability
 nuts = AdvancedHMC.NUTS(tap)
 sampler = externalsampler(nuts)
 ```
@@ -236,7 +236,7 @@ end
 
 @everywhere begin
     n_adapts = 500 # number of adaptation steps
-    tap = 0.65 #target acceptance probability
+    tap = 0.8 #target acceptance probability
     nuts = AdvancedHMC.NUTS(tap)
 end
 
