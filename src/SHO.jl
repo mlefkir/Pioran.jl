@@ -6,8 +6,8 @@ using Pioran: SemiSeparable
 Simple Harmonic Oscillator covariance Function
 
 - `A`: the amplitude of the covariance function
-- `ω₀`: the angular frequency of the covariance function
-- `Q`: the quality factor of the covariance function
+- `ω₀`: the angular frequency of the simple harmonic oscillator
+- `Q`: the quality factor of the simple harmonic oscillator
 
 ```math
 k(τ) = A \exp(-ω₀ τ / Q / 2) \left\{\begin{matrix} 2(1 + ω₀ τ) & Q = 1/2 \\ \cos(η ω₀ τ) + \frac{\sin(η ω₀ τ)}{2η Q} & Q < 1/2 \\ \cosh(η ω₀ τ) + \frac{\sinh(η ω₀ τ)}{2η Q} & Q \geq 1/2 \end{matrix}\right.\\
@@ -33,7 +33,7 @@ function celerite_coefs(covariance::SHO)
         a = covariance.A
         b = a
         c = √2 / 2 * covariance.ω₀
-        d = √2 / 2 * covariance.ω₀
+        d = c
         return [a, b, c, d]
     else
         error("SHO with Q≠1/√2 not implemented yet")

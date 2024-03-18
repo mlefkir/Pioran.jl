@@ -19,7 +19,7 @@ max_f_b = fM / 10
 variance = var(y, corrected=true)
 
 
-function modelling(pars, t, y, yerr)
+function predmodelling(pars, t, y, yerr)
 
     α₁, f₁, α₂, variance, ν, μ = pars
     σ² = ν .* yerr .^ 2
@@ -35,7 +35,7 @@ function modelling(pars, t, y, yerr)
 end
 
 p = [α₁, f₁, α₂, variance, ν, μ]
-fx = modelling(p, t, y, yerr)
+fx = predmodelling(p, t, y, yerr)
 𝓡 = fx.f.kernel
 σ² = ν .* yerr .^ 2
 

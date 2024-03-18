@@ -73,7 +73,7 @@ end
 """
 function celerite_coefs(covariance::SumOfSemiSeparable)
     J = length(covariance.cov)
-    a_1, b_1, c_1, d_1 = celerite_coefs(covariance.cov[1])
+    a_1, _, _, _ = celerite_coefs(covariance.cov[1])
     T = eltype(a_1)
     a, b, c, d = zeros(T, J), zeros(T, J), zeros(T, J), zeros(T, J)
 

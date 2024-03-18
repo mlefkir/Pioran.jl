@@ -1,3 +1,4 @@
+# COV_EXCL_START
 @doc raw"""
     TwoUniformDependent(a, b, c, ϵ)
     TwoUniformDependent(a, b, c) (constructor with default ϵ = 1e-10)
@@ -178,3 +179,4 @@ end
 function Base.length(d::TwoLogUniformDependent)
     return 2
 end
+# COV_EXCL_STOP

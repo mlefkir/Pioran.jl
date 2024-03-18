@@ -91,11 +91,6 @@ AbstractGPs.std(fp::PosteriorGP) = sqrt.(diag(_predict_cov(fp, fp.f.x)))
 AbstractGPs.std(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = sqrt.(diag(_predict_cov(fp, τ)))
 
 function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int64=1)
-    """
-    rand(rng::AbstractRNG, f::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int=1)
-
-    Sample N realisations from the posterior GP at the points x.
-    """
     μ = mean(fp, τ)
     Σ = cov(fp, τ)
     post_dist = MvNormal(μ, Σ)

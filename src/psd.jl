@@ -123,10 +123,6 @@ function build_approx(J::Int64, f0::Real, fM::Real; basis_function::String="SHO"
 end
 
 function init_psd_decomp!(spectral_points::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real}, J::Int64, f0::Real, fM::Real; basis_function::String="SHO")
-    """
-    Initialise the spectral points and the spectral matrix
-    """
-
     # create the spectral_points
     for j in 0:J-1
         spectral_points[j+1] = f0 * (fM / f0)^(j / (J - 1))
@@ -157,10 +153,6 @@ end
 Get amplitudes of the basis functions by solving the linear system of the approximation
 """
 function psd_decomp(psd_normalised::AbstractVector{<:Real}, spectral_matrix::AbstractMatrix{<:Real})
-    """
-    Decompose the psd into the components
-    """
-    # amplitudes of the components
     amplitudes = spectral_matrix \ psd_normalised
     return amplitudes
 end

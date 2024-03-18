@@ -332,11 +332,6 @@ Draw a realisation from the  GP with the covariance function cov at the points �
 - `σ2::Vector`: the measurement variances
 """
 function simulate(rng::AbstractRNG, cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
-    """
-    simulate(cov::SumOfSemiSeparable, τ::Vector, σ2::Vector)
-
-    Simulate a GP with the covariance function cov at the points τ with the variances σ2.
-    """
     N::Int64 = length(τ)
 
     q = randn(rng, N)

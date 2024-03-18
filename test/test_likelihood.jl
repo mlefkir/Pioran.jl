@@ -24,7 +24,6 @@ function modelling(pars, t, y, yerr)
     α₁, f₁, α₂, variance, ν, μ = pars
     σ² = ν .* yerr .^ 2
 
-
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
 
     # Approximation of the PSD to form a covariance function

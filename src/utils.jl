@@ -1,3 +1,4 @@
+# COV_EXCL_START
 """
     extract_subset(rng, prefix, t, y, yerr; n_perc=0.03, take_log=true)
 
@@ -43,7 +44,7 @@ function extract_subset(rng, prefix, t, y, yerr; n_perc=0.03, take_log=true)
         # log transform
         if take_log
             x = log.(y[subset_indexes])
-            info = "#Estimates computed on the log of the subsets time series\n"
+            info = "#Estimates computed on the log of the subset time series\n"
         else
             x = y[subset_indexes]
             info = ""
@@ -124,3 +125,4 @@ function separate_samples(samples,paramnames,with_log_transform::Bool)
     samples_𝓟 = samples[:,remaining]
     return samples_𝓟, samples_variance, samples_ν, samples_μ, samples_c
 end
+# COV_EXCL_STOP

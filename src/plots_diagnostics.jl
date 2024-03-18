@@ -1,7 +1,7 @@
 using CairoMakie
 using VectorizedStatistics
 using LombScargle
-
+# COV_EXCL_START
 function get_theme()
     tw = 1.85
     ts = 10
@@ -707,3 +707,4 @@ function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples
     writedlm(path * "ppc_t_pred.txt", t_pred)
     return fig1, fig2
 end
+# COV_EXCL_STOP
