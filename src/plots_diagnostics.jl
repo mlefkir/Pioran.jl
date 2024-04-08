@@ -226,15 +226,15 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, m
     figs = []
     if plots == "all"
         println("Plotting the posterior predictive power spectral density")
-        fig1 = plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies)
+        fig1 = plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies, with_log_transform=with_log_transform)
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
         fig2 = plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components, n_frequencies=n_frequencies)
         println("Plotting the posterior predictive time series")
-        fig3,fig4 = plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
+        fig3, fig4 = plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
         push!(figs, fig1, fig2, fig3, fig4)
     elseif "psd" ∈ plots
         println("Plotting the posterior predictive power spectral density")
-        fig = plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies)
+        fig = plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies, with_log_transform=with_log_transform)
         push!(figs, fig)
     elseif "lsp" ∈ plots
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
@@ -242,7 +242,7 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, m
         push!(figs, fig)
     elseif "timeseries" ∈ plots
         println("Plotting the posterior predictive time series")
-        fig1,fig2 = plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
+        fig1, fig2 = plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
         push!(figs, fig1, fig2)
     else
         error("The plots argument is not valid")
@@ -251,7 +251,7 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, m
 end
 
 """
-    plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO")
+    plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO", with_log_transform=false)
 
 Plot the posterior predictive power spectral density and the noise levels
 
@@ -260,6 +260,7 @@ Plot the posterior predictive power spectral density and the noise levels
 - `samples_variance::Array{Float64, 1}` : The variance samples
 - `samples_ν::Array{Float64, 1}` : The ν samples
 - `t::Array{Float64, 1}` : The time series
+- `y::Array{Float64, 1}` : The values of the time series
 - `yerr::Array{Float64, 1}` : The errors of the time series
 - `f0::Float64` : The minimum frequency for the approximation of the PSD
 - `fM::Float64` : The maximum frequency for the approximation of the PSD
@@ -271,7 +272,7 @@ Plot the posterior predictive power spectral density and the noise levels
 - `path::String=""` : The path to save the plots
 
 """
-function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO")
+function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO", with_log_transform=false)
     theme = get_theme()
     set_theme!(theme)
 
@@ -286,8 +287,13 @@ function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, yerr, f0, f
 
     mean_dt = mean(dt)
     median_dt = median(dt)
-    mean_sq_err = mean(yerr .^ 2)
-    median_sq_err = median(yerr .^ 2)
+    if with_log_transform
+        mean_sq_err = mean((yerr ./ y) .^ 2)
+        median_sq_err = median((yerr / y) .^ 2)
+    else
+        mean_sq_err = mean((yerr ./ y) .^ 2)
+        median_sq_err = median((yerr / y) .^ 2)
+    end
     mean_ν = mean(samples_ν)
     median_ν = median(samples_ν)
     mean_noise_level = 2 * mean_ν * mean_sq_err * mean_dt
@@ -612,7 +618,7 @@ function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_inter
 
     band!(ax3, lags, sigs[1] * ones(length(lags)) / sqrt(length(t)), -sigs[1] * ones(length(lags)) / sqrt(length(t)), color=(:black, 0.1), label="95%")
     band!(ax3, lags, sigs[2] * ones(length(lags)) / sqrt(length(t)), -sigs[2] * ones(length(lags)) / sqrt(length(t)), color=(:black, 0.1), label="99%")
-    
+
     save(path * "residuals_diagnostics.pdf", fig)
     return fig
 end
