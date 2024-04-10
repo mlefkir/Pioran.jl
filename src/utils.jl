@@ -1,10 +1,12 @@
 # COV_EXCL_START
 """
-    extract_subset(rng, prefix, t, y, yerr; n_perc=0.03, take_log=true)
+    extract_subset(rng, prefix, t, y, yerr; n_perc=0.03, take_log=true, suffix="")
+    extract_subset(seed, prefix, t, y, yerr; n_perc=0.03, take_log=true)
 
 Extract a subset of the data for the analysis and return initial guesses for the mean and variance.
 
 # Arguments
+- `seed::Int64` : Seed for the random number generator.
 - `rng::AbstractRNG` : Random number generator.
 - `prefix::String` : Prefix for the output files.
 - `t::Array{Float64,1}` : Time array.
@@ -12,6 +14,7 @@ Extract a subset of the data for the analysis and return initial guesses for the
 - `yerr::Array{Float64,1}` : Time series error array.
 - `n_perc::Float64` : Percentage of the time series to extract.
 - `take_log::Bool` : If true, log transform the time series for the estimation of the mean and variance.
+- `suffix::String` : Suffix for the output files.
 
 # Return
 - `t_subset::Array{Float64,1}` : Time array of the subset.
@@ -20,9 +23,11 @@ Extract a subset of the data for the analysis and return initial guesses for the
 - `x̄::Float64` : Mean of the normal distribution for μ.
 - `va::Float64` : Variance of the normal distribution for μ.
 """
-function extract_subset(rng, prefix, t, y, yerr; n_perc=0.03, take_log=true)
+function extract_subset(rng::AbstractRNG, prefix, t, y, yerr; n_perc=0.03, take_log=true, suffix="")
 
-    if !isfile(prefix * "_subset_time_series.txt")
+    filename = prefix * "_subset_time_series" *suffix*".txt"
+    println("Filename: ", filename)
+    if !isfile(filename)
         println("Extracting subset time series")
         # total number of points
         n_points = length(t)
@@ -53,24 +58,29 @@ function extract_subset(rng, prefix, t, y, yerr; n_perc=0.03, take_log=true)
         va = var(x)
         x̄ = mean(x)
 
-        open(prefix * "_subset_time_series.txt", "w") do io
+        open(filename, "w") do io
             write(io, "#Extracted time series for the analysis (97% of the OG time series)\n# t y yerr\n#Initial guess for the mean and variance from the discarded subset\n#mean: $x̄ va: $va\n$info")
             writedlm(io, hcat(t_subset, y_subset, yerr_subset))
         end
     else
         println("Subset time series file already exists, reading from file")
-        for line in eachline(prefix * "_subset_time_series.txt")
+        for line in eachline(filename)
             if "#mean: " == line[1:7]
                 x̄, va = parse.(Float64, split(line[8:end], " va: "))
                 break
             end
         end
-        A = readdlm(prefix * "_subset_time_series.txt", comments=true, comment_char='#')
+        A = readdlm(filename, comments=true, comment_char='#')
         t_subset, y_subset, yerr_subset = A[:, 1], A[:, 2], A[:, 3]
     end
     return t_subset, y_subset, yerr_subset, x̄, va
 end
 
+function extract_subset(seed::Int64, prefix, t, y, yerr; n_perc=0.03, take_log=true)
+    rng = MersenneTwister(seed)
+    return extract_subset(rng, prefix, t, y, yerr, n_perc=n_perc, take_log=take_log,suffix="_$(seed)")
+
+end
 
 """
     separate_samples(samples, paramnames, with_log_transform::Bool)
