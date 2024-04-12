@@ -1,7 +1,7 @@
 name = "Pioran"
 uuid = "58cf54c2-5899-443a-99a6-60958a74ec4a"
 authors = ["Mehdy Lefkir"]
-version = "0.1.3"
+version = "0.1.4"
 
 [deps]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
