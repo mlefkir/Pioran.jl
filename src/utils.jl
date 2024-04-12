@@ -4,6 +4,7 @@
     extract_subset(seed, prefix, t, y, yerr; n_perc=0.03, take_log=true)
 
 Extract a subset of the data for the analysis and return initial guesses for the mean and variance.
+Either a random number generator or a seed can be provided.
 
 # Arguments
 - `seed::Int64` : Seed for the random number generator.
@@ -76,9 +77,9 @@ function extract_subset(rng::AbstractRNG, prefix, t, y, yerr; n_perc=0.03, take_
     return t_subset, y_subset, yerr_subset, x̄, va
 end
 
-function extract_subset(seed::Int64, prefix, t, y, yerr; n_perc=0.03, take_log=true)
+function extract_subset(seed::Int64, prefix, t, y, yerr; n_perc=0.03, take_log=true, suffix="")
     rng = MersenneTwister(seed)
-    return extract_subset(rng, prefix, t, y, yerr, n_perc=n_perc, take_log=take_log,suffix="_$(seed)")
+    return extract_subset(rng, prefix, t, y, yerr, n_perc=n_perc, take_log=take_log,suffix=suffix)
 
 end
 

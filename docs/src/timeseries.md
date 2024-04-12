@@ -82,9 +82,8 @@ In a Bayesian framework defining the prior for the mean `μ` and the variance `v
 If we assume the time series to be log-normally distributed then the log of the subset is taken to provide an estimate of the mean and variance this is done by setting `take_log=true`. See the example below:
 
 ```julia
-using Random
-rng = MersenneTwister(1234)
-t, y, σ, x̄, va = extract_subset(rng, t_all, y_all, σ_all; take_log=true)
+seed = 1234
+t, y, σ, x̄, va = extract_subset(seed, t_all, y_all, σ_all; take_log=true,suffix="_seed1234")
 ```
 The prior on the mean can be constructed using a normal distribution with the mean and variance of the subset.
 ```@example priors
