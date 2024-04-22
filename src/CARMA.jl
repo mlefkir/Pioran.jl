@@ -156,8 +156,7 @@ function calculate(f, model::CARMA)
         den += α[j] * ωi .^ (j - 1)
     end
 
-
-    return abs.(num ./ den) .^ 2 / get_normalisation(model) * model.σ² / 2
+    return abs.(num ./ den) .^ 2 / abs(get_normalisation(model)) * model.σ² / 2
 end
 
 """
