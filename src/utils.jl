@@ -93,6 +93,7 @@ function separate_samples(samples,paramnames,with_log_transform::Bool)
     
     # try to find all the parameters except the PSD parameters
     # gamma
+    n_samples = size(samples,1)
     collected_pars = []
     gamma_index = findall(name->name=="γ", paramnames)
     if isempty(gamma_index)
