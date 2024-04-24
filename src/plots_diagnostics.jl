@@ -749,10 +749,6 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_variance, samples_�
     median_ν = median(samples_ν)
     mean_noise_level = 2 * mean_ν * mean_sq_err * mean_dt
     median_noise_level = 2 * median_ν * median_sq_err * median_dt
-    println("median_noise_level = ", median_noise_level)
-    println("median_ν = ", median_ν)
-    println("median_sq_err = ", median_sq_err)
-    println("median_dt = ", median_dt)
 
     P = size(samples_variance, 1)
     psd_samples = [Pioran.calculate(f, CARMA(p, q, convert.(Complex, samples_rα[i, :]), samples_β[i, :], samples_variance[i])) for i in 1:P]
@@ -764,7 +760,7 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_variance, samples_�
     fig = Figure(size=(800, 600))
 
     if plot_f_P
-        psd_quantiles = vquantile!.(Ref(f .* psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+        psd_quantiles = vquantile!.(Ref(f .* psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
         ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="f PSD",
             xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
 
