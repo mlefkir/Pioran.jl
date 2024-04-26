@@ -289,10 +289,10 @@ function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0
     median_dt = median(dt)
     if with_log_transform
         mean_sq_err = mean((yerr ./ y) .^ 2)
-        median_sq_err = median((yerr / y) .^ 2)
+        median_sq_err = median((yerr ./ y) .^ 2)
     else
-        mean_sq_err = mean((yerr ./ y) .^ 2)
-        median_sq_err = median((yerr / y) .^ 2)
+        mean_sq_err = mean((yerr) .^ 2)
+        median_sq_err = median((yerr) .^ 2)
     end
     mean_ν = mean(samples_ν)
     median_ν = median(samples_ν)
@@ -712,5 +712,100 @@ function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples
     writedlm(path * "ppc_residuals_mean.txt", mean_res)
     writedlm(path * "ppc_t_pred.txt", t_pred)
     return fig1, fig2
+end
+
+function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_variance, samples_ν, t, y, yerr, p, q; plot_f_P=false, n_frequencies=1000, path="", with_log_transform=false)
+    if p != size(samples_rα, 2)
+        error("p=$(p) is not equal to the number of columns in samples_rα=$(size(samples_rα,2))")
+    end
+    if q + 1 != size(samples_β, 2)
+        error("q+1=$(q+1) is not equal to the number of columns in samples_β=$(size(samples_β,2))")
+    end
+
+    theme = get_theme()
+    set_theme!(theme)
+
+    if !ispath(path)
+        mkpath(path)
+    end
+
+    dt = diff(t)
+
+    f_min = 1 / (t[end] - t[1])/10
+    f_max = 1 / minimum(dt) / 2.0*10
+
+    f = exp.(range(log(f_min), log(f_max), length=n_frequencies))
+
+    mean_dt = mean(dt)
+    median_dt = median(dt)
+    if with_log_transform
+        mean_sq_err = mean((yerr ./ y) .^ 2)
+        median_sq_err = median((yerr ./ y) .^ 2)
+    else
+        mean_sq_err = mean((yerr) .^ 2)
+        median_sq_err = median((yerr) .^ 2)
+    end
+    mean_ν = mean(samples_ν)
+    median_ν = median(samples_ν)
+    mean_noise_level = 2 * mean_ν * mean_sq_err * mean_dt
+    median_noise_level = 2 * median_ν * median_sq_err * median_dt
+
+    P = size(samples_variance, 1)
+    psd_samples = [Pioran.calculate(f, CARMA(p, q, convert.(Complex, samples_rα[i, :]), samples_β[i, :], samples_variance[i])) for i in 1:P]
+    psd_samples = mapreduce(permutedims, vcat, psd_samples)
+
+    psd_quantiles = vquantile!.(Ref(psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+
+
+    fig = Figure(size=(800, 600))
+
+    if plot_f_P
+        psd_quantiles = vquantile!.(Ref(f .* psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims=2)
+        ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="f PSD",
+            xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
+
+        lines!(ax1, f, vec(psd_quantiles[3]), label="Model Median", color=:blue)
+        band!(ax1, f, vec(psd_quantiles[1]), vec(psd_quantiles[5]), color=(:blue, 0.2), label="95%")
+        band!(ax1, f, vec(psd_quantiles[2]), vec(psd_quantiles[4]), color=(:blue, 0.4), label="68%")
+
+        lines!(ax1, f, f .* mean_noise_level, label="Mean noise level", color=:black, linestyle=:dash)
+        lines!(ax1, f, f .* median_noise_level, label="Median noise level", color=:black)
+
+        vlines!(ax1, [f_min; f_max], color=:black, linestyle=:dot, label="Observed window")
+    else
+        ax1 = Axis(fig[1, 1], xscale=log10, yscale=log10, xlabel=L"Frequency (${d}^{-1}$)", ylabel="PSD",
+            xminorticks=IntervalsBetween(9), yminorticks=IntervalsBetween(9), title="Posterior predictive power spectral density")
+
+        lines!(ax1, f, vec(psd_quantiles[3]), label="Model Median", color=:blue)
+        band!(ax1, f, vec(psd_quantiles[1]), vec(psd_quantiles[5]), color=(:blue, 0.2), label="95%")
+        band!(ax1, f, vec(psd_quantiles[2]), vec(psd_quantiles[4]), color=(:blue, 0.4), label="68%")
+        lines!(ax1, f, ones(length(f)) * mean_noise_level, label="Mean noise level", color=:black, linestyle=:dash)
+        lines!(ax1, f, ones(length(f)) * median_noise_level, label="Median noise level", color=:black)
+        vlines!(ax1, [f_min; f_max], color=:black, linestyle=:dot, label="Observed window")
+
+    end
+    fig[2, 1] = Legend(fig, ax1, orientation=:horizontal,
+        tellwidth=false,
+        tellheight=true,
+        halign=:center, valign=:bottom,
+        fontsize=10, nbanks=3,
+        framevisible=false)
+
+    a = vcat([f', psd_quantiles...])
+
+    open(path * "psd_noise_levels.txt"; write=true) do f
+        write(f, "# Noise levels\n# mean_noise_level, median_noise_level\n")
+        writedlm(f, [mean_noise_level, median_noise_level])
+    end
+
+    open(path * "psd_ppc_data.txt"; write=true) do f
+        write(f, "# Posterior predictive CARMA power spectral density\n# quantiles=[0.025, 0.16, 0.5, 0.84, 0.975] \n# f, psd_quantiles\n")
+        if plot_f_P
+            write(f, "# f * PSD\n")
+        end
+        writedlm(f, a)
+    end
+    save(path * "psd_ppc.pdf", fig)
+    return fig
 end
 # COV_EXCL_STOP

@@ -43,3 +43,13 @@ function Celerite_covariance(τ, a, b, c, d)
     return exp.(-c .* τ) .* (a * cos.(d .* τ) .+ b * sin.(d .* τ))
 end
 
+function Celerite_psd(f, a, b, c, d)
+    ω = 2π * f
+    num = (a * c + b * d) * (c^2 + d^2) + (a * c - b * d) * ω .^ 2
+    den = ω .^ 4 + 2 * (c^2 - d^2) * ω .^ 2 + (c^2 + d^2)^2
+    return num ./ den
+end
+
+function Celerite_psd(f, cov::Celerite)
+    return Celerite_psd(f, cov.a, cov.b, cov.c, cov.d)
+end

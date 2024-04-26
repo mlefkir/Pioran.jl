@@ -3,6 +3,79 @@ using Distributions
 using LinearAlgebra
 using Random
 
+
+function test_scalableGP_Exp_init()
+
+    𝓡 = Exp(1.4, 0.5)
+    μ = 1.2
+
+    f = ScalableGP(𝓡) # zero-mean GP
+    fm = ScalableGP(μ, 𝓡)
+    @testset "Scalable GP initialisation" begin
+        @test f isa Pioran.ScalableGP
+        @test f.kernel isa Pioran.SemiSeparable
+        @test fm isa Pioran.ScalableGP
+        @test fm.kernel isa Pioran.SemiSeparable
+
+    end
+    @testset "Scalable GP mean value" begin
+        @test f.f.mean.c == 0.0
+        @test fm.f.mean.c == μ
+    end
+end
+
+function test_scalableGP_carma_init()
+    rα = [-0.042163209825323775 + 1.1115603157767922im,
+        -0.042163209825323775 - 1.1115603157767922im,
+        -0.7599101571312047 + 0.0im]
+    β = [3.9413022090550216,
+        11.38193903188344,
+        1]
+    𝓒 = CARMA(3, 2, rα, β, 1.3)
+    μ = 1.2
+
+    f = ScalableGP(𝓒) # zero-mean GP
+    fm = ScalableGP(μ, 𝓒)
+    @testset "Scalable GP initialisation" begin
+        @test f isa Pioran.ScalableGP
+        @test f.kernel isa Pioran.CARMA
+        @test fm isa Pioran.ScalableGP
+        @test fm.kernel isa Pioran.CARMA
+
+    end
+    @testset "Scalable GP mean value" begin
+        @test f.f.mean.c == 0.0
+        @test fm.f.mean.c == μ
+    end
+end
+
+function test_scalableGP_carma_likelihood()
+    function get_quad(rng, p, q, a_min=-4, a_max=4, b_min=-4, b_max=4)
+        log_a = rand(rng, Uniform(a_min, a_max), p)
+        log_b = rand(rng, Uniform(b_min, b_max), q)
+        return exp.(log_a), exp.(log_b)
+    end
+    p, q = 3, 2
+    t = [0.0, 3.0, 3.2, 3.4, 45.5, 101.2]
+    y = [1.3, 2.2, 4.21, 2.5, 3.3, 5.2]
+    yerr = [0.1, 0.2, 0.1, 0.1, 0.2, 0.1]
+    seeds = [567, 123, 890, 456, 321]
+    variances = [1.32, 35.3, 242.2, 46.6, 0.3]
+    μ_set = [1.2, 0.3, 0.1, 0.46, 0.1]
+
+    for (k, s) in enumerate(seeds)
+        rng = MersenneTwister(s)
+        a, b = get_quad(rng, p, q)
+        rα = quad2roots(a)
+        β = roots2coeffs(quad2roots(b))
+        𝓒 = CARMA(p, q, rα, β, variances[k])
+        f = ScalableGP(μ_set[k], 𝓒)
+        @test isfinite(logpdf(f(t, yerr .^ 2), y))
+        @test logpdf(f(t, yerr .^ 2), y) ≈ -Pioran.log_likelihood_direct(𝓒, t, y .- μ_set[k], yerr .^ 2)
+    end
+end
+
+
 function test_scalableGP_init()
     α₁, f₁, α₂ = 0.2, 0.02, 3.1
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
@@ -151,8 +224,14 @@ end
 
 @testset "Scalable GP" begin
     test_scalableGP_init()
+    test_scalableGP_Exp_init()
     test_scalableGP_likelihood()
     test_scalableGP_posterior()
     test_scalableGP_posterior_sample()
     test_scalableGP_sample()
+end
+
+@testset "Scalable GP CARMA" begin
+    test_scalableGP_carma_init()
+    test_scalableGP_carma_likelihood()
 end

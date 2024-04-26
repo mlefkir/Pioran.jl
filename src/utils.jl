@@ -92,8 +92,18 @@ Separate the samples into the parameters of the model and the parameters of the 
 function separate_samples(samples,paramnames,with_log_transform::Bool)
     
     # try to find all the parameters except the PSD parameters
-    # nu
+    # gamma
+    n_samples = size(samples,1)
     collected_pars = []
+    gamma_index = findall(name->name=="γ", paramnames)
+    if isempty(gamma_index)
+        samples_γ = ones(n_samples)
+    else
+        samples_γ = samples[:,gamma_index[1]]
+        push!(collected_pars,gamma_index[1])
+    end
+
+    # nu
     nu_index = findall(name->name=="ν", paramnames)
     if isempty(nu_index)
         samples_ν = ones(n_samples)
@@ -133,6 +143,8 @@ function separate_samples(samples,paramnames,with_log_transform::Bool)
     allpars = collect(1:length(paramnames))
     remaining = setdiff(allpars, collected_pars)
     println("Deducing that the PSD parameter are: ", paramnames[remaining])
+    println("Deducing that the hyperparameter are: ", paramnames[collected_pars])
+
     samples_𝓟 = samples[:,remaining]
     return samples_𝓟, samples_variance, samples_ν, samples_μ, samples_c
 end

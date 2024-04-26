@@ -152,18 +152,46 @@ end
 Compute the log-likelihood of a semi-separable covariance function using the celerite algorithm.
 
 # Arguments
-- `cov::SumOfSemiSeparable`: the covariance function
+- `cov::SumOfSemiSeparable` or `cov::CARMA` or `cov::SemiSeparable`: the covariance function
+- `τ::Vector`: the time points
+- `y::Vector`: the data
+- `σ2::Vector`: the measurement variances
+
+"""
+function log_likelihood(cov::SumOfSemiSeparable, τ::Vector, y::Vector, σ2::Vector)
+    a, b, c, d = cov.a, cov.b, cov.c, cov.d
+    return logl(a, b, c, d, τ, y, σ2)
+end
+
+function log_likelihood(cov::CARMA, τ::Vector, y::Vector, σ2::Vector)
+    a, b, c, d = celerite_coefs(cov)
+    return real(logl(a, b, c, d, τ, y, σ2))
+end
+
+function log_likelihood(cov::SemiSeparable, τ::Vector, y::Vector, σ2::Vector)
+    a, b, c, d = celerite_coefs(cov)
+    return logl(a, b, c, d, τ, y, σ2)
+end
+ 
+"""
+    logl(a, b, c, d, τ, y, σ2)
+
+Compute the log-likelihood of a GP with a semi-separable covariance function using the celerite algorithm.
+
+# Arguments
+- `a::Vector`
+- `b::Vector`
+- `c::Vector`
+- `d::Vector`
 - `τ::Vector`: the time points
 - `y::Vector`: the data
 - `σ2::Vector`: the measurement variances
 
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
-
 """
-function log_likelihood(cov::SumOfSemiSeparable, τ::Vector, y::Vector, σ2::Vector)
-
+function logl(a::Vector, b::Vector, c::Vector, d::Vector, τ::Vector, y::Vector, σ2::Vector)
     N::Int64 = length(y)
-    a, b, c, d = cov.a, cov.b, cov.c, cov.d
+
     # initialise the matrices and vectors
     T = eltype(a)
     # number of terms
@@ -171,7 +199,7 @@ function log_likelihood(cov::SumOfSemiSeparable, τ::Vector, y::Vector, σ2::Vec
     # number of rows in U and V, twice the number of terms
     R::Int64 = 2 * J
 
-    S_n = zeros(T, R, R)
+    S_n = zeros(T, R, R)    
     ϕ = Matrix{T}(undef, R, N - 1)
     U = Matrix{T}(undef, R, N)
     V = Matrix{T}(undef, R, N)
@@ -191,19 +219,33 @@ end
 Compute the posterior mean of the GP at the points τ given the data y and time t.
 
 # Arguments
-- `cov::SumOfSemiSeparable`: the covariance function
+- `cov::SumOfSemiSeparable` or `cov::CARMA` or `cov::SemiSeparable`: the covariance function
 - `τ::Vector`: the time points
 - `t::Vector`: the data time points
 - `y::Vector`: the data
 - `σ2::Vector`: the measurement variances
 """
 function predict(cov::SumOfSemiSeparable, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector)
+    a, b, c, d = cov.a, cov.b, cov.c, cov.d
+    return pred(a, b, c, d, τ, t, y, σ²)
+end
+
+function predict(cov::CARMA, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector)
+    a, b, c, d = celerite_coefs(cov)
+    return pred(a, b, c, d, τ, t, y, σ²)
+end
+
+function predict(cov::SemiSeparable, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector)
+    a, b, c, d = celerite_coefs(cov)
+    return pred(a, b, c, d, τ, t, y, σ²)
+end
+
+function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector)
 
     M = length(τ)
     N = length(t)
     # initialise the matrices and vectors
     # get the coefficients
-    a, b, c, d = cov.a, cov.b, cov.c, cov.d
     T = eltype(a)
     # number of terms
     J::Int64 = length(a)
@@ -322,23 +364,39 @@ end
 
 """ 
     simulate(rng, cov, τ, σ2)
+    simulate(cov, τ, σ2)
 
 Draw a realisation from the  GP with the covariance function cov at the points τ with the variances σ2.
 
 # Arguments
 - `rng::AbstractRNG`: the random number generator
-- `cov::SumOfSemiSeparable`: the covariance function
+- `cov::SumOfSemiSeparable` or `cov::CARMA` or `cov::SemiSeparable`: the covariance function
 - `τ::Vector`: the time points
 - `σ2::Vector`: the measurement variances
 """
 function simulate(rng::AbstractRNG, cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
+    a, b, c, d = cov.a, cov.b, cov.c, cov.d
+    return sim(rng, a, b, c, d, τ, σ2)
+end
+
+function simulate(rng::AbstractRNG, cov::SemiSeparable, τ::AbstractVector, σ2::AbstractVector)
+    a, b, c, d = celerite_coefs(cov)
+    return sim(rng, a, b, c, d, τ, σ2)
+end
+
+function simulate(rng::AbstractRNG, cov::CARMA, τ::AbstractVector, σ2::AbstractVector)
+    a, b, c, d = celerite_coefs(cov)
+    return sim(rng, a, b, c, d, τ, σ2)
+end
+
+simulate(cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector) = simulate(Random.GLOBAL_RNG, cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
+
+
+function sim(rng::AbstractRNG, a,b,c,d, τ::AbstractVector, σ2::AbstractVector)
     N::Int64 = length(τ)
 
     q = randn(rng, N)
-
-
     # initialise the matrices and vectors
-    a::Vector, b::Vector, c::Vector, d::Vector = cov.a::Vector, cov.b::Vector, cov.c::Vector, cov.d::Vector
     T = eltype(a)
     # number of terms
     J::Int64 = length(a)
@@ -369,5 +427,3 @@ function simulate(rng::AbstractRNG, cov::SumOfSemiSeparable, τ::AbstractVector,
 
     return y_sim
 end
-
-simulate(cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector) = simulate(Random.GLOBAL_RNG, cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)

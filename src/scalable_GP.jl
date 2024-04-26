@@ -15,7 +15,7 @@ f = ScalableGP(μ, 𝓡) # with mean μ
 ```
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-struct ScalableGP{Typef<:GP{<:AbstractGPs.ConstMean},Tk<:SumOfSemiSeparable} <: AbstractGPs.AbstractGP
+struct ScalableGP{Typef<:GP{<:AbstractGPs.ConstMean},Tk<:SemiSeparable} <: AbstractGPs.AbstractGP
     f::Typef
     kernel::Tk
 end
@@ -23,8 +23,8 @@ end
 # const FinitePosteriorGP = AbstractGPs.FiniteGP{<:ScalableGP}
 
 ScalableGP(f::GP) = ScalableGP(f, f.kernel)
-ScalableGP(kernel::SumOfSemiSeparable) = ScalableGP(GP(0.0, kernel), kernel)
-ScalableGP(mean::Real, kernel::SumOfSemiSeparable) = ScalableGP(GP(mean, kernel), kernel)
+ScalableGP(kernel::SemiSeparable) = ScalableGP(GP(0.0, kernel), kernel)
+ScalableGP(mean::Real, kernel::SemiSeparable) = ScalableGP(GP(mean, kernel), kernel)
 
 const FiniteScalableGP = AbstractGPs.FiniteGP{<:ScalableGP}
 

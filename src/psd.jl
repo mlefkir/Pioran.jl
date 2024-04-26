@@ -70,6 +70,16 @@ struct DoubleBendingPowerLaw_Bis{T<:Real} <: BendingPowerLaw
     Δα₂::T
 end
 
+struct TripleBendingPowerLaw{T<:Real} <: BendingPowerLaw
+    α₁::T
+    f₁::T
+    α₂::T
+    f₂::T
+    α₃::T
+    f₃::T
+    α₄::T
+end
+
 """ calculate(f, psd::PowerSpectralDensity)
     
     Calculate the power spectral density at frequency f
@@ -86,6 +96,10 @@ end
 
 function calculate(f, psd::SingleBendingPowerLaw)
     return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁))
+end
+
+function calculate(f, psd::TripleBendingPowerLaw)
+    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / psd.f₂)^(psd.α₃ - psd.α₂)) / (1 + (f / psd.f₃)^(psd.α₄ - psd.α₃))
 end
 
 (psd::PowerSpectralDensity)(f) = calculate.(f, Ref(psd))
