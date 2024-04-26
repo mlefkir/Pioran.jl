@@ -15,7 +15,7 @@ using ProgressMeter
 using Polynomials
 
 export SHO, Celerite, Exp, CARMA
-export SingleBendingPowerLaw, DoubleBendingPowerLaw, DoubleBendingPowerLaw_Bis, approx
+export SingleBendingPowerLaw, DoubleBendingPowerLaw, DoubleBendingPowerLaw_Bis, approx, TripleBendingPowerLaw
 export ScalableGP, posterior, log_likelihood, mean, cov, std
 export quad2roots, roots2coeffs
 export run_diagnostics, run_posterior_predict_checks, extract_subset

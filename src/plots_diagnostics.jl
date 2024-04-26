@@ -731,8 +731,8 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_variance, samples_�
 
     dt = diff(t)
 
-    f_min = 1 / (t[end] - t[1])
-    f_max = 1 / minimum(dt) / 2.0
+    f_min = 1 / (t[end] - t[1])/10
+    f_max = 1 / minimum(dt) / 2.0*10
 
     f = exp.(range(log(f_min), log(f_max), length=n_frequencies))
 
