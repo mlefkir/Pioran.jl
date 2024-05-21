@@ -158,17 +158,17 @@ Compute the log-likelihood of a semi-separable covariance function using the cel
 - `σ2::Vector`: the measurement variances
 
 """
-function log_likelihood(cov::SumOfSemiSeparable, τ::Vector, y::Vector, σ2::Vector)
+function log_likelihood(cov::SumOfSemiSeparable, τ, y, σ2)
     a, b, c, d = cov.a, cov.b, cov.c, cov.d
     return logl(a, b, c, d, τ, y, σ2)
 end
 
-function log_likelihood(cov::CARMA, τ::Vector, y::Vector, σ2::Vector)
+function log_likelihood(cov::CARMA, τ, y, σ2)
     a, b, c, d = celerite_coefs(cov)
     return real(logl(a, b, c, d, τ, y, σ2))
 end
 
-function log_likelihood(cov::SemiSeparable, τ::Vector, y::Vector, σ2::Vector)
+function log_likelihood(cov::SemiSeparable, τ, y, σ2)
     a, b, c, d = celerite_coefs(cov)
     return logl(a, b, c, d, τ, y, σ2)
 end
@@ -189,7 +189,7 @@ Compute the log-likelihood of a GP with a semi-separable covariance function usi
 
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-function logl(a::Vector, b::Vector, c::Vector, d::Vector, τ::Vector, y::Vector, σ2::Vector)
+function logl(a, b, c, d, τ, y, σ2)
     N::Int64 = length(y)
 
     # initialise the matrices and vectors
