@@ -232,21 +232,26 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, m
         println("Plotting the posterior predictive time series")
         fig3, fig4 = plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
         push!(figs, fig1, fig2, fig3, fig4)
-    elseif "psd" ∈ plots
+    else
+        
+        if "psd" ∈ plots
         println("Plotting the posterior predictive power spectral density")
         fig = plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0, fM, model, path=path, basis_function=basis_function, plot_f_P=plot_f_P, n_components=n_components, n_frequencies=n_frequencies, with_log_transform=with_log_transform)
         push!(figs, fig)
-    elseif "lsp" ∈ plots
+        end
+        if "lsp" ∈ plots
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
         fig = plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path=path, plot_f_P=plot_f_P, basis_function=basis_function, n_components=n_components, n_frequencies=n_frequencies)
         push!(figs, fig)
-    elseif "timeseries" ∈ plots
+        end 
+        if "timeseries" ∈ plots
         println("Plotting the posterior predictive time series")
         fig1, fig2 = plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c=samples_c, n_samples=n_samples, basis_function=basis_function, path=path, n_components=n_components)
         push!(figs, fig1, fig2)
-    else
-        error("The plots argument is not valid")
+        end
     end
+        # error("The plots argument is not valid")
+    # end
     return figs
 end
 
