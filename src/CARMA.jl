@@ -187,7 +187,7 @@ Convert the coefficients of a quadratic polynomial to its roots.
 - `r::Vector{Complex}`: Roots of the polynomial.
 """
 function quad2roots(quad)
-    n = length(quad)
+    n = size(quad, 1)#length(quad)
     r = zeros(Complex, n)
     if n % 2 == 1
         r[end] = -quad[end]
@@ -197,13 +197,14 @@ function quad2roots(quad)
     end
 
     for k in 1:2:n_
-        Δ = quad[k]^2 - 4 * quad[k+1]
+        b, c = quad[k+1], quad[k]
+        Δ = b^2 - 4 * c
         if Δ < 0
-            r[k] = (-quad[k] + im * √ - Δ) / 2
+            r[k] = (-b + im * √ - Δ) / 2
             r[k+1] = conj(r[k])
         else
-            r[k] = (-quad[k] + √Δ) / 2
-            r[k+1] = (-quad[k] - √Δ) / 2
+            r[k] = (-b + √Δ) / 2
+            r[k+1] = (-b - √Δ) / 2
         end
     end
     return r
