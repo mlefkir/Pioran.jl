@@ -9,6 +9,7 @@ Continuous-time AutoRegressive Moving Average (CARMA) model for the power spectr
 - `β`: the moving average coefficients length q+1
 - `σ²`: the variance of the process
 
+The power spectral density of the CARMA model is given by:
 ```math
 \mathcal{P}(f) = \sigma^2 \left|\dfrac{\sum\limits_{k=0}^q \beta_k \left(2\pi\mathrm{i}f\right)^k }{\sum\limits_{l=0}^p \alpha_l \left(2\pi\mathrm{i}f\right)^l}\right|^2
 ```
@@ -87,7 +88,7 @@ function celerite_coefs(covariance::CARMA)
 	return CARMA_celerite_coefs(covariance.p, covariance.rα, covariance.β, covariance.σ²)
 end
 
-""" 
+@doc raw""" 
 	CARMA_celerite_coefs(p, rα, β, σ²)
 
 Convert the CARMA coefficients to Celerite coefficients.
@@ -220,7 +221,7 @@ function calculate(f, model::CARMA)
 	return abs.(num ./ den) .^ 2 / abs(get_normalisation(model)) * model.σ² / 2
 end
 
-"""
+@doc raw"""
 	roots2coeffs(r)
 
 Convert the roots of a polynomial to its coefficients.
@@ -236,7 +237,7 @@ function roots2coeffs(r)
 	return P.coeffs
 end
 
-"""
+@doc raw""" 
 	quad2roots(quad)
 
 Convert the coefficients of a quadratic polynomial to its roots.
