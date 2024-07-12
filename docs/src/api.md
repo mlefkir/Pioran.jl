@@ -95,3 +95,18 @@ Modules = [Pioran]
 Pages = ["priors.jl"]
 Order   = [:type, :function]
 ```
+
+## CARMA
+```@autodocs
+Modules = [Pioran]
+Pages = ["CARMA.jl"]
+Private = false
+Order   = [:type]
+```
+
+```@autodocs
+Modules = [Pioran]
+Pages = ["CARMA.jl"]
+Private = false
+Order   = [:function]
+```

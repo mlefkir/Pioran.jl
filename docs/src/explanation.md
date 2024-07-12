@@ -1,6 +1,6 @@
 # Spectral analysis in Pioran
 
-Here we only give a brief introduction to Gaussian processes and how we use them in `Pioran` to infer the power spectrum of a random time series. For more details on Gaussian processes, we refer the reader to the book by Rassmusen and Williams [^1].
+Here we only give a brief introduction to Gaussian processes and how we use them in `Pioran` to infer the power spectrum of a random time series. For more details on Gaussian processes, we refer the reader to the book by [2006gpml.book.....R](@cite).
 
 ## Gaussian process regression
 
@@ -43,16 +43,9 @@ Unfortunately, it is not always easy to compute the covariance function from the
 
 In `Pioran`, we use Gaussian processes to model the time series data and infer the parameters of the power spectral density. We implement the [`ScalableGP`](@ref) type to build a Gaussian process using the [AbstractGPs](https://github.com/JuliaGaussianProcesses/AbstractGPs.jl) interface. 
 
-As presented above, Gaussian process regression is expensive to compute and it is not possible to describe all possible spectral densities with analytical kernels. Here we propose to use an approximation of the power spectral density by a sum of simple power spectral densities. We choose these simple power spectral densities to be the Fourier transform of known covariance functions which have a quasi-separable structure. This enables the fast and scalable computation of the log-likelihood function using the `celerite` algorithm introduced by Foreman-Mackey et al.[^2].
+As presented above, Gaussian process regression is expensive to compute and it is not possible to describe all possible spectral densities with analytical kernels. Here we propose to use an approximation of the power spectral density by a sum of simple power spectral densities. We choose these simple power spectral densities to be the Fourier transform of known covariance functions which have a quasi-separable structure. This enables the fast and scalable computation of the log-likelihood function using the `celerite` algorithm introduced in [2017AJ....154..220F](@cite).
 Python implementations of the `celerite` algorithm are available in [celerite2](https://celerite2.readthedocs.io/en/latest/) and [tinygp](https://tinygp.readthedocs.io/en/stable/).
 
 This method uses the quasi-separable structure of the covariance functions [`Celerite`](@ref), [`SHO`](@ref) and [`Exp`](@ref) to compute the log-likelihood in a linear scaling with the number of datapoints as shown in the following benchmarks.
 
 ![benchmark_likelihood](./figures/Likelihood_benchmarks_bis.png)
-
-
-## References
-
-
-[^1]: Rassmusen, C. E., & Williams, C. K. I. (2006). Gaussian Processes for Machine Learning. MIT Press.
-[^2]: Foreman-Mackey D., Agol E., Ambikasaran S., Angus R., 2017, AJ, [154, 220](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F/abstract)
