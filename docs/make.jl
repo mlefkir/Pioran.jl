@@ -7,7 +7,7 @@ using DocumenterCitations
 bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"),style=:authoryear)
 
 BASIC_PAGES = ["explanation.md", "modelling.md","simulations.md", "timeseries.md", "diagnostics.md"]
-ADVANCED_PAGES = ["turing.md", "ultranest.md","carma.md"]
+ADVANCED_PAGES = ["turing.md", "ultranest.md"]
 
 makedocs(sitename="Pioran.jl",
     pages=["Home" => "index.md",
