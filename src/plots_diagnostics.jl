@@ -48,7 +48,7 @@ function plot_boxplot_psd_approx(residuals, ratios; path = "")
 	meta_max_rat = vec(maximum(abs.(ratios), dims = 1))
 
 	y = vec([meta_mean meta_median meta_max])
-	x = rand(1:3, length(meta_mean))
+	x = vec([ones(length(meta_mean)) 2 * ones(length(meta_mean)) 3 * ones(length(meta_mean))])
 	y2 = vec([meta_mean_rat meta_median_rat meta_max_rat])
 
 
@@ -62,6 +62,13 @@ function plot_boxplot_psd_approx(residuals, ratios; path = "")
 
 	save(path * "boxplot_psd_approx.pdf", fig)
 	save(path * "boxplot_psd_approx.png", fig)
+
+	## save the data
+	open(path * "boxplot_psd_approx.txt"; write = true) do file
+		write(file, "# Boxplot of the residuals and ratios for the PSD approximation\n# meta_mean, meta_median, meta_max, meta_mean_rat, meta_median_rat, meta_max_rat\n")
+		writedlm(file, hcat(meta_mean, meta_median, meta_max, meta_mean_rat, meta_median_rat, meta_max_rat))
+	end
+
 	return fig
 end
 
@@ -103,6 +110,19 @@ function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path = "")
 		framevisible = false)
 	save(path * "quantiles_psd_approx.pdf", fig)
 	save(path * "quantiles_psd_approx.png", fig)
+
+	## save the data
+	open(path * "quantiles_psd_approx.txt"; write = true) do file
+		write(file, "# Quantiles of the residuals and ratios for the PSD approximation\n")
+		write(file, "#f_min: $f_min, f_max: $f_max\n")
+		write(file, "# f, res_quantiles, rat_quantiles\n")
+		writedlm(
+			file,
+			hcat(f, vec(res_quantiles[1]), vec(res_quantiles[2]), vec(res_quantiles[3]), vec(res_quantiles[4]), vec(res_quantiles[5]),
+				vec(rat_quantiles[1]), vec(rat_quantiles[2]), vec(rat_quantiles[3]), vec(rat_quantiles[4]), vec(rat_quantiles[5])),
+		)
+	end
+
 	return fig
 end
 
@@ -129,6 +149,13 @@ function plot_mean_approx(f, residuals, ratios; path = "")
 	hlines!(ax1, 0, color = :red, linestyle = :dash)
 	save(path * "diagnostics_psd_approx.pdf", fig)
 	save(path * "diagnostics_psd_approx.png", fig)
+
+	## save the data
+	open(path * "mean_psd_approx.txt"; write = true) do file
+		write(file, "# Mean residuals and ratios for the PSD approximation\n# f, mean_res, mean_rat\n")
+		writedlm(file, hcat(f, mean_res, mean_rat))
+	end
+
 	return fig
 end
 
