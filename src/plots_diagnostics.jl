@@ -42,20 +42,22 @@ function plot_boxplot_psd_approx(residuals, ratios; path = "")
 	meta_mean = vec(vmean(residuals, dims = 1))
 	meta_median = vec(vmedian(residuals, dims = 1))
 	meta_max = vec(maximum(abs.(residuals), dims = 1))
+	meta_min = vec(minimum(abs.(residuals), dims = 1))
 
 	meta_mean_rat = vec(vmean(ratios, dims = 1))
 	meta_median_rat = vec(vmedian(ratios, dims = 1))
 	meta_max_rat = vec(maximum(abs.(ratios), dims = 1))
+	meta_min_rat = vec(minimum(abs.(ratios), dims = 1))
 
-	y = vec([meta_mean meta_median meta_max])
-	x = vec([ones(length(meta_mean)) 2 * ones(length(meta_mean)) 3 * ones(length(meta_mean))])
-	y2 = vec([meta_mean_rat meta_median_rat meta_max_rat])
+	y = vec([meta_mean meta_median meta_min meta_max])
+	x = vec([ones(length(meta_mean)) 2 * ones(length(meta_mean)) 3 * ones(length(meta_mean)) 4 * ones(length(meta_mean))])
+	y2 = vec([meta_mean_rat meta_median_rat meta_min_rat meta_max_rat])
 
 
 	fig = Figure(size = (800, 600))
-	ax1 = Axis(fig[1, 1], xticks = ([1, 2, 3], ["mean", "median", "max"]), ylabel = "Residuals", title = "Distribution of the meta-(mean,max,median) of
-			   residuals and ratios for the PSD approximation")
-	ax2 = Axis(fig[2, 1], xticks = ([1, 2, 3], ["mean", "median", "max"]), ylabel = "Ratios")
+	ax1 = Axis(fig[1, 1], xticks = ([1, 2, 3, 4], ["mean", "median", "min", "max"]), ylabel = "Residuals", title = "Distribution of the meta-(mean,max,median) of
+				 residuals and ratios for the PSD approximation")
+	ax2 = Axis(fig[2, 1], xticks = ([1, 2, 3, 4], ["mean", "median", "min", "max"]), ylabel = "Ratios")
 
 	boxplot!(ax1, x, y)
 	boxplot!(ax2, x, y2, show_outliers = true)
@@ -65,8 +67,8 @@ function plot_boxplot_psd_approx(residuals, ratios; path = "")
 
 	## save the data
 	open(path * "boxplot_psd_approx.txt"; write = true) do file
-		write(file, "# Boxplot of the residuals and ratios for the PSD approximation\n# meta_mean, meta_median, meta_max, meta_mean_rat, meta_median_rat, meta_max_rat\n")
-		writedlm(file, hcat(meta_mean, meta_median, meta_max, meta_mean_rat, meta_median_rat, meta_max_rat))
+		write(file, "# Boxplot of the residuals and ratios for the PSD approximation\n# meta_mean, meta_median, meta_min, meta_max, meta_mean_rat, meta_median_rat, meta_min_rat, meta_max_rat\n")
+		writedlm(file, hcat(meta_mean, meta_median, meta_min, meta_max, meta_mean_rat, meta_median_rat, meta_min_rat, meta_max_rat))
 	end
 
 	return fig
