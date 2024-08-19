@@ -354,7 +354,6 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
 	spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function = basis_function)
 
 	psd_continuum, psd_features = separate_psd(psd_model)
-	println(psd_continuum), println(psd_features)
 	@assert !isnothing(psd_continuum) "The PSD model should contain at least one BendingPowerLaw component to be approximated"
 	psd_normalised = get_normalised_psd(psd_continuum, spectral_points)
 	amplitudes = psd_decomp(psd_normalised, spectral_matrix)
