@@ -31,12 +31,15 @@ struct CARMA{Tp <: Int64, Trα <: Complex, Tβ <: Real, T <: Real} <: SemiSepara
 			throw(ArgumentError("The length of the roots of the autoregressive polynomial must be equal to the order of the autoregressive polynomial"))
 		elseif length(β) != q + 1
 			throw(ArgumentError("The length of the moving average coefficients must be equal to q + 1"))
+		elseif β[1] != 1
+			throw(ArgumentError("The first moving average coefficient must be equal to 1"))
 		end
 		new{Tp, Trα, Tβ, T}(p, q, rα, β, σ²)
 	end
 
 end
 CARMA(p::Int64, q::Int64, rα, β) = CARMA(p, q, rα, β, 1.0)
+
 
 # Define the kernel functions for the CARMA model
 KernelFunctions.kappa(R::CARMA, τ::Real) = CARMA_covariance(τ, R)
@@ -50,38 +53,38 @@ Convert a CARMA model to a Celerite model.
 
 """
 # this was used in the previous version of the package
-# function celerite_repr(cov::CARMA)
-#     a, b, c, d = celerite_coefs(cov)
-#     J = length(a)
-#     p = cov.p
-
-#     𝓡 = Celerite(a[1], b[1], c[1], d[1])
-
-#     if p % 2 == 0
-#         for i in 2:J
-#             𝓡 += Celerite(a[i], b[i], c[i], d[i])
-#         end
-#     else
-#         for i in 2:J-1
-#             𝓡 += Celerite(a[i], b[i], c[i], d[i])
-#         end
-#         𝓡 += Exp(a[end],c[end])
-#     end
-
-#     return 𝓡
-# end
-
+# From Vysakh's derivation 
 function celerite_repr(cov::CARMA)
 	a, b, c, d = celerite_coefs(cov)
-	J = cov.p
+	J = length(a)
+	p = cov.p
 
 	𝓡 = Celerite(a[1], b[1], c[1], d[1])
 
-	for i in 2:J
-		𝓡 += Celerite(a[i], b[i], c[i], d[i])
+	if p % 2 == 0
+		for i in 2:J
+			𝓡 += Celerite(a[i], b[i], c[i], d[i])
+		end
+	else
+		for i in 2:J-1
+			𝓡 += Celerite(a[i], b[i], c[i], d[i])
+		end
+		𝓡 += Exp(a[end], c[end])
 	end
+
 	return 𝓡
 end
+# function celerite_repr(cov::CARMA)
+# 	a, b, c, d = celerite_coefs(cov)
+# 	J = cov.p
+
+# 	𝓡 = Celerite(a[1], b[1], c[1], d[1])
+
+# 	for i in 2:J
+# 		𝓡 += Celerite(a[i], b[i], c[i], d[i])
+# 	end
+# 	return 𝓡
+# end
 
 
 function celerite_coefs(covariance::CARMA)
@@ -99,15 +102,53 @@ Convert the CARMA coefficients to Celerite coefficients.
 - `β::Vector{Real}`: moving average coefficients
 - `σ²::Real`: the variance of the process   
 """
+# function CARMA_celerite_coefs(p, rα, β, σ²)
+
+# 	T = eltype(β)
+# 	# check if the last root is real
+# 	J = p
+# 	# J is number of terms in the covariance function
+# 	a, b, c, d = Vector{T}(undef, J), Vector{T}(undef, J), Vector{T}(undef, J), Vector{T}(undef, J)
+# 	variance = 0.0
+
+# 	for (k, rₖ) in enumerate(rα)#[1:2:end])
+# 		num_1, num_2 = 0, 0
+# 		for (l, βₗ) in enumerate(β)
+# 			num_1 += βₗ * rₖ^(l - 1)
+# 			num_2 += βₗ * (-rₖ)^(l - 1)
+# 		end
+# 		num = num_1 * num_2
+# 		den = -2 * real(rₖ)
+# 		r_ = filter(x -> x != rₖ, rα)
+# 		for rⱼ in r_
+# 			den *= (rⱼ - rₖ) * (conj(rⱼ) + rₖ)
+# 		end
+
+# 		Frac = num / den
+# 		variance += num / den
+
+# 		a[k] = 2 * real(Frac)
+# 		b[k] = 2 * imag(Frac)
+# 		c[k] = -real(rₖ)
+# 		d[k] = -imag(rₖ)
+# 	end
+# 	# variance = sum(a)
+# 	va = σ² / sum(a) * variance
+# 	return a .* va, b .* va, c, d
+# end
 function CARMA_celerite_coefs(p, rα, β, σ²)
 
 	T = eltype(β)
 	# check if the last root is real
-	J = p
+	if p % 2 == 0
+		J = p ÷ 2
+	else
+		J = (p - 1) ÷ 2 + 1
+	end
 	# J is number of terms in the covariance function
-	a, b, c, d = zeros(T, J), zeros(T, J), zeros(T, J), zeros(T, J)
-
-	for (k, rₖ) in enumerate(rα)#[1:2:end])
+	a, b, c, d = Vector{T}(undef, J), Vector{T}(undef, J), Vector{T}(undef, J), Vector{T}(undef, J)
+	variance = 0.0
+	for (k, rₖ) in enumerate(rα[1:2:end])
 		num_1, num_2 = 0, 0
 		for (l, βₗ) in enumerate(β)
 			num_1 += βₗ * rₖ^(l - 1)
@@ -121,50 +162,16 @@ function CARMA_celerite_coefs(p, rα, β, σ²)
 		end
 
 		Frac = num / den
+		variance += num / den
+
 		a[k] = 2 * real(Frac)
 		b[k] = 2 * imag(Frac)
 		c[k] = -real(rₖ)
 		d[k] = -imag(rₖ)
 	end
-	variance = sum(a)
-	va = σ² / variance
+	va = 2 * σ² * real(variance)
 	return a .* va, b .* va, c, d
 end
-# function CARMA_celerite_coefs(p, rα, β, σ²)
-
-#     T = eltype(β)
-#     # check if the last root is real
-#     if p % 2 == 0
-#         J = p ÷ 2
-#     else
-#         J = (p - 1) ÷ 2 + 1
-#     end
-#     # J is number of terms in the covariance function
-#     a, b, c, d = zeros(T, J), zeros(T, J), zeros(T, J), zeros(T, J)
-
-#     for (k, rₖ) in enumerate(rα[1:2:end])
-#         num_1, num_2 = 0, 0
-#         for (l, βₗ) in enumerate(β)
-#             num_1 += βₗ * rₖ^(l - 1)
-#             num_2 += βₗ * (-rₖ)^(l - 1)
-#         end
-#         num = num_1 * num_2
-#         den = -2 * real(rₖ)
-#         r_ = filter(x -> x != rₖ, rα)
-#         for rⱼ in r_
-#             den *= (rⱼ - rₖ) * (conj(rⱼ) + rₖ)
-#         end
-
-#         Frac = num / den
-#         a[k] = 2 * real(Frac)
-#         b[k] = 2 * imag(Frac)
-#         c[k] = -real(rₖ)
-#         d[k] = -imag(rₖ)
-#     end
-#     variance = sum(a)
-#     va = σ² / variance
-#     return a .* va, b .* va, c, d
-# end
 
 
 """ 
@@ -218,7 +225,7 @@ function calculate(f, model::CARMA)
 		den += α[j] * ωi .^ (j - 1)
 	end
 
-	return abs.(num ./ den) .^ 2 / abs(get_normalisation(model)) * model.σ² / 2
+	return abs.(num ./ den) .^ 2 * model.σ² #/ abs(get_normalisation(model))
 end
 
 @doc raw"""
@@ -234,7 +241,7 @@ Convert the roots of a polynomial to its coefficients.
 """
 function roots2coeffs(r)
 	P = fromroots(r)
-	return P.coeffs
+	return real.(P.coeffs)
 end
 
 @doc raw""" 
