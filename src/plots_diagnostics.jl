@@ -660,8 +660,8 @@ function plot_residuals_diagnostics(t, mean_res, res_quantiles; confidence_inter
 	ax2 = Axis(gc[1, 2],
 		xminorticks = IntervalsBetween(9),
 		yminorticks = IntervalsBetween(9))
-	hist!(ax2, vec(res_quantiles[3]), bins = 20, color = :black, alpha = 0.25, label = "Residuals", direction = :x)
-	hist!(ax2, vec(mean_res), bins = 20, color = :blue, alpha = 0.01, label = "Residuals", direction = :x)
+	hist!(ax2, vec(res_quantiles[3]), bins = 20, color = (:black, 0.25), label = "Residuals", direction = :x)
+	hist!(ax2, vec(mean_res), bins = 20, color = (:blue, 0.1), label = "Residuals", direction = :x)
 	linkyaxes!(ax1, ax2)
 	colsize!(gc, 1, Auto(length(0:0.1:5)))
 	colsize!(gc, 2, Auto(length(0:0.1:2)))
@@ -716,7 +716,7 @@ function plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr; path = "")
 		title = "Posterior predictive simulated time series")
 	errorbars!(ax1, t, y, yerr)
 	scatter!(ax1, t, y, marker = :circle, markersize = 7.5, label = "Data")
-	lines!(ax1, t_pred, vec(ts_quantiles[3]), label = "median realisation", color = :black, linealpha = 0.5, linewidth = 1)
+	lines!(ax1, t_pred, vec(ts_quantiles[3]), label = "median realisation", color = (:black, 0.5), linewidth = 1)
 	band!(ax1, t_pred, vec(ts_quantiles[1]), vec(ts_quantiles[5]), color = (:black, 0.1), label = "95%")
 	band!(ax1, t_pred, vec(ts_quantiles[2]), vec(ts_quantiles[4]), color = (:black, 0.2), label = "68%")
 	fig[2, 1] = Legend(fig, ax1, orientation = :horizontal,
