@@ -22,7 +22,7 @@ variance = var(y, corrected=true)
 σ² = ν .* yerr .^ 2
 μ = 0.0# mean(y)
 
-𝓟 = SimpleBendingPowerLaw(α₁, f₁, α₂)
+𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
 
 # Approximation of the PSD to form a covariance function
 𝓡 = approx(𝓟, f0, fM, 20, variance)
