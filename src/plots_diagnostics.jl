@@ -341,7 +341,7 @@ Plot the posterior predictive power spectral density and the noise levels
 - `path::String=""` : The path to save the plots
 
 """
-function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0, fM, model; plot_f_P = false, n_frequencies = 1000, path = "", n_components = 20, basis_function = "SHO", with_log_transform = false,save_samples=true)
+function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0, fM, model; plot_f_P = false, n_frequencies = 1000, path = "", n_components = 20, basis_function = "SHO", with_log_transform = false,save_samples=false)
 	theme = get_theme()
 	set_theme!(theme)
 
