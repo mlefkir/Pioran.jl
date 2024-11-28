@@ -96,6 +96,10 @@ function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractV
     end
 end
 
+init_semi_separable!(a::Float64, b::Float64, c::Float64,
+    d::Float64, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
+    D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix) = init_semi_separable!([a], [b], [c], [d], τ, σ2, V, D, U, ϕ, S_n)
+
 """ 
     solve_prec!(z, y, U, W, D, ϕ)
 
