@@ -9,5 +9,6 @@ using Test
     include("test_acvf.jl")
     include("test_psd.jl")
     include("test_scalablegp.jl")
+    include("test_predict_celerite.jl")
     # include("test_carma.jl")
 end

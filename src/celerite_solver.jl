@@ -96,6 +96,10 @@ function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractV
     end
 end
 
+init_semi_separable!(a::Float64, b::Float64, c::Float64,
+    d::Float64, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
+    D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix) = init_semi_separable!([a], [b], [c], [d], τ, σ2, V, D, U, ϕ, S_n)
+
 """ 
     solve_prec!(z, y, U, W, D, ϕ)
 
@@ -294,7 +298,7 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
             end
 
             S[2:2:end] = (Q[2:2:end] .+ zn .* sin.(d .* tn)) .* exp.(-c .* (τm .- tn)) .* (a .* sin.(d .* τm) .- b .* cos.(d .* τm))
-            S[1:2:end] = (Q[1:2:end] .+ zn .* cos.(d .* tn)) .* exp.(-c .* (τm - tn)) .* (a .* sin.(d .* τm) .+ b .* cos.(d .* τm))
+            S[1:2:end] = (Q[1:2:end] .+ zn .* cos.(d .* tn)) .* exp.(-c .* (τm - tn)) .* (a .* cos.(d .* τm) .+ b .* sin.(d .* τm))
             # update Q for the next iteration
             if start + 1 == n₀
                 start += 1
