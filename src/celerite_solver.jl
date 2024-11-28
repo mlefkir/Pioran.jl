@@ -298,7 +298,7 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
             end
 
             S[2:2:end] = (Q[2:2:end] .+ zn .* sin.(d .* tn)) .* exp.(-c .* (τm .- tn)) .* (a .* sin.(d .* τm) .- b .* cos.(d .* τm))
-            S[1:2:end] = (Q[1:2:end] .+ zn .* cos.(d .* tn)) .* exp.(-c .* (τm - tn)) .* (a .* sin.(d .* τm) .+ b .* cos.(d .* τm))
+            S[1:2:end] = (Q[1:2:end] .+ zn .* cos.(d .* tn)) .* exp.(-c .* (τm - tn)) .* (a .* cos.(d .* τm) .+ b .* sin.(d .* τm))
             # update Q for the next iteration
             if start + 1 == n₀
                 start += 1
