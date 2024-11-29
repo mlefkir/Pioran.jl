@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Nested sampling with ultranest · Pioran.jl</title><meta name="title" content="Nested sampling with ultranest · Pioran.jl"/><meta property="og:title" content="Nested sampling with ultranest · Pioran.jl"/><meta property="twitter:title" content="Nested sampling with ultranest · Pioran.jl"/><meta name="description" content="Pioran.jl: A Julia package for power spectral density estimation using scalable Gaussian processes."/><meta property="og:description" content="Pioran.jl: A Julia package for power spectral density estimation using scalable Gaussian processes."/><meta property="twitter:description" content="Pioran.jl: A Julia package for power spectral density estimation using scalable Gaussian processes."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../"><img src="../assets/logo.svg" alt="Pioran.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../">Pioran.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><span class="tocitem">Basic usage</span><ul><li><a class="tocitem" href="../explanation/">Spectral analysis in Pioran</a></li><li><a class="tocitem" href="../modelling/">Modelling</a></li><li><a class="tocitem" href="../simulations/">Simulations</a></li><li><a class="tocitem" href="../timeseries/">Time series and priors</a></li><li><a class="tocitem" href="../diagnostics/">Diagnostics post-inference</a></li></ul></li><li><span class="tocitem">Inference</span><ul><li><a class="tocitem" href="../turing/">Hamiltonian Monte Carlo with Turing.jl</a></li><li class="is-active"><a class="tocitem" href>Nested sampling with ultranest</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Modelling-with-ultranest"><span>Modelling with ultranest</span></a></li><li><a class="tocitem" href="#Full-example"><span>Full example</span></a></li><li><a class="tocitem" href="#References"><span>References</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../carma/">CARMA</a></li><li><a class="tocitem" href="../bibliography/">Bibliography</a></li><li><a class="tocitem" href="../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Inference</a></li><li class="is-active"><a href>Nested sampling with ultranest</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Nested sampling with ultranest</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/mlefkir/Pioran.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/mlefkir/Pioran.jl/blob/main/docs/src/ultranest.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Nested-sampling-with-ultranest"><a class="docs-heading-anchor" href="#Nested-sampling-with-ultranest">Nested sampling with ultranest</a><a id="Nested-sampling-with-ultranest-1"></a><a class="docs-heading-anchor-permalink" href="#Nested-sampling-with-ultranest" title="Permalink"></a></h1><p>In this example, we show how to use the Python package <a href="https://johannesbuchner.github.io/UltraNest/index.html"><code>ultranest</code></a> to perform inference on a simple model with nested sampling. We also show how to use the <code>ultranest</code><sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup> package with MPI to parallelise the sampling on multiple processes.</p><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><h4 id="Install-the-Python-environment"><a class="docs-heading-anchor" href="#Install-the-Python-environment">Install the Python environment</a><a id="Install-the-Python-environment-1"></a><a class="docs-heading-anchor-permalink" href="#Install-the-Python-environment" title="Permalink"></a></h4><p>It is recommended to use a virtual environment to install the required Python packages. To create a new virtual environment, run the following command in your terminal. If you are using <code>conda</code>, you can create a new environment with the following command:</p><pre><code class="language-bash hljs">conda create -n julia_ultranest python=3.10</code></pre><p>Then, activate the environment:</p><pre><code class="language-bash hljs">conda activate julia_ultranest</code></pre><p>You can then install <code>ultranest</code> with the following command:</p><pre><code class="language-bash hljs">conda install -c conda-forge ultranest</code></pre><h4 id="Install-the-Julia-environment"><a class="docs-heading-anchor" href="#Install-the-Julia-environment">Install the Julia environment</a><a id="Install-the-Julia-environment-1"></a><a class="docs-heading-anchor-permalink" href="#Install-the-Julia-environment" title="Permalink"></a></h4><p>To use <code>ultranest</code> with Julia, you need to install the <code>PyCall</code> package.  In the Julia REPL, set the <code>PYTHON</code> environment variable to the path of the Python executable in the virtual environment you created earlier. For example:</p><pre><code class="language-julia hljs">ENV[&quot;PYTHON&quot;] = &quot;/opt/miniconda3/envs/julia_ultranest/bin/python&quot;</code></pre><p>You can do this by running the following commands in the Julia REPL:</p><pre><code class="language-julia hljs">using Pkg; Pkg.add(&quot;PyCall&quot;)
+Pkg.build(&quot;PyCall&quot;)</code></pre><p>We can check that the Python environment has been set correctly by running the following commands in the Julia REPL:</p><pre><code class="language-julia hljs">using PyCall
+PyCall.python</code></pre><p>Finally, <code>ultranest</code> can be loaded in Julia with the following commands:</p><pre><code class="language-julia hljs">ultranest = pyimport(&quot;ultranest&quot;)</code></pre><h4 id="Install-MPI.jl-(optional)"><a class="docs-heading-anchor" href="#Install-MPI.jl-(optional)">Install MPI.jl (optional)</a><a id="Install-MPI.jl-(optional)-1"></a><a class="docs-heading-anchor-permalink" href="#Install-MPI.jl-(optional)" title="Permalink"></a></h4><p>If you want to parallelise the sampling with MPI, you first have to install MPI on your system. On Ubuntu, you can install the <code>openmpi</code> package with the following command:</p><pre><code class="language-bash hljs">sudo apt-get install openmpi-bin libopenmpi-dev</code></pre><p>You can then install <code>MPI.jl</code> and <code>MPIPreferences.jl</code> in Julia with the following commands:</p><pre><code class="language-julia hljs">using Pkg; Pkg.add(&quot;MPI&quot;)
+Pkg.add(&quot;MPIPreferences&quot;)</code></pre><p>As detailed in the official documentation of <code>MPI.jl</code><sup class="footnote-reference"><a id="citeref-2" href="#footnote-2">[2]</a></sup>, the system MPI binary can be linked to Julia with the following command:</p><pre><code class="language-bash hljs">julia --project -e &#39;using MPIPreferences; MPIPreferences.use_system_binary()&#39;</code></pre><p>More information on how to configure MPI on can be found in the official documentation of <code>MPI.jl</code>.</p><p>The following lines of code can be used to initialise MPI in a Julia script:</p><pre><code class="language-julia hljs">using MPI
+MPI.Init()</code></pre><h2 id="Modelling-with-ultranest"><a class="docs-heading-anchor" href="#Modelling-with-ultranest">Modelling with ultranest</a><a id="Modelling-with-ultranest-1"></a><a class="docs-heading-anchor-permalink" href="#Modelling-with-ultranest" title="Permalink"></a></h2><p>We assume the reader is familiar with nested sampling and the <code>ultranest</code> package. </p><h3 id="Priors"><a class="docs-heading-anchor" href="#Priors">Priors</a><a id="Priors-1"></a><a class="docs-heading-anchor-permalink" href="#Priors" title="Permalink"></a></h3><p>Priors are defined using the <code>quantile</code> function and probability distributions from the <a href="https://juliastats.org/Distributions.jl/stable/"><code>Distributions</code></a> package. The <code>prior_transform</code> function is then used to transform the unit cube to the prior space as shown in the following example:</p><pre><code class="language-julia hljs">using Distributions
+
+function prior_transform(cube)
+    α₁ = quantile(Uniform(0.0, 1.25), cube[1])
+    f₁ = quantile(LogUniform(1e-3, 1e3), cube[2])
+    α₂ = quantile(Uniform(α₁, 4.0), cube[3])
+    variance = quantile(LogNormal(-2., 1.2), cube[4])
+    ν = quantile(Gamma(2, 0.5), cube[5])
+    μ = quantile(Normal(0., 2.), cube[6])
+    return [α₁, f₁, α₂, variance, ν, μ]
+end</code></pre><h3 id="Model-and-likelihood"><a class="docs-heading-anchor" href="#Model-and-likelihood">Model and likelihood</a><a id="Model-and-likelihood-1"></a><a class="docs-heading-anchor-permalink" href="#Model-and-likelihood" title="Permalink"></a></h3><p>The <code>loglikelihood</code> function is then defined to compute the likelihood of the model given the data and the parameters. The various instructions in the function are detailed in previous sections or examples.</p><pre><code class="language-julia hljs">using Pioran # hide
+function loglikelihood(y, t, σ, params)
+    α₁, f₁, α₂, variance, ν, μ = params
+    σ² = ν .* σ .^ 2
+    𝓟 = model(α₁, f₁, α₂)
+    𝓡 = approx(𝓟, f0, fM, 20, variance)
+    f = ScalableGP(μ, 𝓡)
+    return logpdf(f(t, σ²), y)
+end
+paramnames = [&quot;α₁&quot;, &quot;f₁&quot;, &quot;α₂&quot;, &quot;variance&quot;, &quot;ν&quot;, &quot;μ&quot;]
+logl(params) = loglikelihood(y, t, yerr, params)</code></pre><p>We can then initialise the <code>ultranest</code> sampler with the following command:</p><pre><code class="language-julia hljs">sampler = ultranest.ReactiveNestedSampler(paramnames, logl, resume=true, transform=prior_transform, log_dir=&quot;inference_dir&quot;, vectorized=false)</code></pre><p>The inference can be started with the following command:</p><pre><code class="language-julia hljs">results = sampler.run()</code></pre><p>Finally, the results can be printed and plotted with the following commands:</p><pre><code class="language-julia hljs">sampler.print_results()
+sampler.plot()</code></pre><h3 id="Parallel-sampling-with-MPI"><a class="docs-heading-anchor" href="#Parallel-sampling-with-MPI">Parallel sampling with MPI</a><a id="Parallel-sampling-with-MPI-1"></a><a class="docs-heading-anchor-permalink" href="#Parallel-sampling-with-MPI" title="Permalink"></a></h3><p>If you want to parallelise the sampling with MPI to speed-up the computation, follow the steps presented before and run the script with the following command:</p><pre><code class="language-bash hljs">mpiexec -n 4 julia script.jl</code></pre><p>where <code>4</code> is the number of processes to use.</p><h2 id="Full-example"><a class="docs-heading-anchor" href="#Full-example">Full example</a><a id="Full-example-1"></a><a class="docs-heading-anchor-permalink" href="#Full-example" title="Permalink"></a></h2><pre><code class="language-julia hljs">using MPI
+MPI.Init()
+comm = MPI.COMM_WORLD
+
+using Pioran
+using Distributions
+using Statistics
+using Random
+using DelimitedFiles
+using PyCall
+# load the python package ultranest
+ultranest = pyimport(&quot;ultranest&quot;)
+# define the random number generator
+rng = MersenneTwister(123)
+
+# get the filename from the command line
+filename = ARGS[1]
+fname = replace(split(filename, &quot;/&quot;)[end], &quot;.txt&quot; =&gt; &quot;_single&quot;)
+dir = &quot;inference/&quot; * fname
+plot_path = dir * &quot;/plots/&quot;
+
+# Load the data and extract a subset for the analysis
+A = readdlm(filename, comments=true, comment_char=&#39;#&#39;)
+t_all, y_all, yerr_all = A[:, 1], A[:, 2], A[:, 3]
+t, y, yerr, x̄, va = extract_subset(rng, fname, t_all, y_all, yerr_all);
+
+# Frequency range for the approx and the prior
+f_min, f_max = 1 / (t[end] - t[1]), 1 / minimum(diff(t)) / 2
+f0, fM = f_min / 20.0, f_max * 20.0
+min_f_b, max_f_b = f0 * 4.0, fM / 4.0
+
+# F var^2 is distributed as a log-normal
+μᵥ, σᵥ = -1.5, 1.0;
+μₙ, σₙ² = 2μᵥ, 2(σᵥ)^2;
+σₙ = sqrt(σₙ²)
+
+# options for the approximation
+basis_function = &quot;SHO&quot;
+n_components = 20
+model = SingleBendingPowerLaw
+posterior_checks = true
+prior_checks = true
+
+function loglikelihood(y, t, σ, params)
+
+    α₁, f₁, α₂, variance, ν, μ, c = params
+
+    # Rescale the measurement variance
+    σ² = ν .* σ .^ 2 ./ (y .- c) .^ 2
+
+    # Make the flux Gaussian
+    yn = log.(y .- c)
+
+    # Define power spectral density function
+    𝓟 = model(α₁, f₁, α₂)
+
+    # Approximation of the PSD to form a covariance function
+    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function=basis_function)
+
+    # Build the GP
+    f = ScalableGP(μ, 𝓡)
+
+    # sample the conditioned distribution
+    return logpdf(f(t, σ²), yn)
+end
+logl(pars) = loglikelihood(y, t, yerr, pars)
+
+# Priors
+function prior_transform(cube)
+    α₁ = quantile(Uniform(0.0, 1.25), cube[1])
+    f₁ = quantile(LogUniform(min_f_b, max_f_b), cube[2])
+    α₂ = quantile(Uniform(α₁, 4.0), cube[3])
+    variance = quantile(LogNormal(μₙ, σₙ), cube[4])
+    ν = quantile(Gamma(2, 0.5), cube[5])
+    μ = quantile(Normal(x̄, 5 * sqrt(va)), cube[6])
+    c = quantile(LogUniform(1e-6, minimum(y) * 0.99), cube[7])
+    return [α₁, f₁, α₂, variance, ν, μ, c]
+end
+paramnames = [&quot;α₁&quot;, &quot;f₁&quot;, &quot;α₂&quot;, &quot;variance&quot;, &quot;ν&quot;, &quot;μ&quot;, &quot;c&quot;]
+
+if MPI.Comm_rank(comm) == 0 &amp;&amp; prior_checks
+    unif = rand(rng, 7, 3000) # uniform samples from the unit hypercube
+    priors = mapreduce(permutedims, hcat, [prior_transform(unif[:, i]) for i in 1:3000]&#39;)# transform the uniform samples to the prior
+    run_diagnostics(priors[1:3, :], priors[4, :], f0, fM, model, f_min, f_max, path=plot_path, basis_function=basis_function, n_components=n_components)
+end
+
+println(&quot;Hello world, I am $(MPI.Comm_rank(comm)) of $(MPI.Comm_size(comm))&quot;)
+
+println(&quot;Running sampler...&quot;)
+sampler = ultranest.ReactiveNestedSampler(paramnames, logl, resume=true, transform=prior_transform, log_dir=dir, vectorized=false)
+results = sampler.run()
+sampler.print_results()
+sampler.plot()
+
+if MPI.Comm_rank(comm) == 0 &amp;&amp; posterior_checks
+    samples = readdlm(dir * &quot;/chains/equal_weighted_post.txt&quot;, skipstart=1)
+    run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, true; path=plot_path, basis_function=basis_function, n_components=n_components)
+end</code></pre><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a><a href="https://johannesbuchner.github.io/UltraNest/index.html">https://johannesbuchner.github.io/UltraNest/index.html</a></li><li class="footnote" id="footnote-2"><a class="tag is-link" href="#citeref-2">2</a><a href="https://juliaparallel.org/MPI.jl/stable/configuration/">https://juliaparallel.org/MPI.jl/stable/configuration/</a></li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../turing/">« Hamiltonian Monte Carlo with Turing.jl</a><a class="docs-footer-nextpage" href="../carma/">CARMA »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Friday 29 November 2024 11:24">Friday 29 November 2024</span>. Using Julia version 1.10.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
