@@ -40,7 +40,7 @@ plot(t, realisations, label="Realisations", xlabel="Time [days]", framestyle = :
 
 ## Conditioning the Gaussian process
 
-We can compute the conditioned or posterior distribution of the Gaussian process given some observations using posterior. Let's use a subset of the realisations to condition the Gaussian process and then sample from the conditioned distribution.
+We can compute the conditioned or posterior distribution of the Gaussian process given some observations. Let's use a subset of the realisations to condition the Gaussian process and then sample from the conditioned distribution.
 
 ```@example drawing_samples
 using StatsBase

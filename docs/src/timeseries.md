@@ -100,8 +100,8 @@ For astronomical light curves from active galaxies, we can constrain the varianc
  We know it is very unlikely to be higher than $1$ therefore we can use a log-normal distribution. As $F_\mathrm{var}^2$ is proportional to the variance, we can assume a log-normal prior for the variance.
 ```@example priors
 # Distribution for F_var
-μᵥ, σᵥ = -1.5, 1.0
-μₙ, σₙ² = 2μᵥ, 2(σᵥ)^2
+μᵥ, σᵥ = -1.5, 1/√2
+μₙ, σₙ² = 2μᵥ, 4(σᵥ)^2
 variance = LogNormal(μₙ, sqrt(σₙ²))
 x = range(1e-3, 10, length=10000)
 
