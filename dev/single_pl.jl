@@ -47,8 +47,8 @@ f0, fM = f_min / 20.0, f_max * 20.0
 min_f_b, max_f_b = f0 * 4.0, fM / 4.0
 
 # F var^2 is distributed as a log-normal
-μᵥ, σᵥ = -1.5, 1.0;
-μₙ, σₙ² = 2μᵥ, 2(σᵥ)^2;
+μᵥ, σᵥ = -1.5, 1/√2;
+μₙ, σₙ² = 2μᵥ, 4(σᵥ)^2;
 σₙ = sqrt(σₙ²)
 
 # options for the approximation
