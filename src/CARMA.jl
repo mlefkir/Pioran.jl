@@ -49,37 +49,23 @@ KernelFunctions.ScaledKernel(R::CARMA, number::Real = 1.0) = CARMA(R.p, R.q, R.r
 Convert a CARMA model to a Celerite model.
 
 """
-# this was used in the previous version of the package
-# function celerite_repr(cov::CARMA)
-#     a, b, c, d = celerite_coefs(cov)
-#     J = length(a)
-#     p = cov.p
-
-#     𝓡 = Celerite(a[1], b[1], c[1], d[1])
-
-#     if p % 2 == 0
-#         for i in 2:J
-#             𝓡 += Celerite(a[i], b[i], c[i], d[i])
-#         end
-#     else
-#         for i in 2:J-1
-#             𝓡 += Celerite(a[i], b[i], c[i], d[i])
-#         end
-#         𝓡 += Exp(a[end],c[end])
-#     end
-
-#     return 𝓡
-# end
-
 function celerite_repr(cov::CARMA)
 	a, b, c, d = celerite_coefs(cov)
-	J = cov.p
+	J = length(a)
 
 	𝓡 = Celerite(a[1], b[1], c[1], d[1])
 
-	for i in 2:J
-		𝓡 += Celerite(a[i], b[i], c[i], d[i])
+	if cov.p % 2 == 0
+		for i in 2:J
+			𝓡 += Celerite(a[i], b[i], c[i], d[i])
+		end
+	else
+		for i in 2:J-1
+			𝓡 += Celerite(a[i], b[i], c[i], d[i])
+		end
+		𝓡 += Exp(a[end], c[end])
 	end
+
 	return 𝓡
 end
 
@@ -103,28 +89,39 @@ function CARMA_celerite_coefs(p, rα, β, σ²)
 
 	T = eltype(β)
 	# check if the last root is real
-	J = p
-	# J is number of terms in the covariance function
-	a, b, c, d = zeros(T, J), zeros(T, J), zeros(T, J), zeros(T, J)
 
-	for (k, rₖ) in enumerate(rα)#[1:2:end])
-		num_1, num_2 = 0, 0
+	if p % 2 == 0
+		J = p ÷ 2
+	else
+		J = (p - 1) ÷ 2 + 1
+	end
+	# J is number of terms in the covariance function
+	a, b, c, d = Vector{T}(undef, J), Vector{T}(undef, J), Vector{T}(undef, J), Vector{T}(undef, J)
+
+	for (k, rₖ) in enumerate(rα[1:2:end])
+		num_1, num_2 = 0.0, 0.0
 		for (l, βₗ) in enumerate(β)
 			num_1 += βₗ * rₖ^(l - 1)
 			num_2 += βₗ * (-rₖ)^(l - 1)
 		end
-		num = num_1 * num_2
-		den = -2 * real(rₖ)
+		Frac = -num_1 * num_2 / real(rₖ)
 		r_ = filter(x -> x != rₖ, rα)
 		for rⱼ in r_
-			den *= (rⱼ - rₖ) * (conj(rⱼ) + rₖ)
+			Frac /= (rⱼ - rₖ) * (conj(rⱼ) + rₖ)
 		end
-
-		Frac = num / den
-		a[k] = 2 * real(Frac)
-		b[k] = 2 * imag(Frac)
-		c[k] = -real(rₖ)
-		d[k] = -imag(rₖ)
+		if k != J || p % 2 == 0
+			a[k] = 2 * real(Frac)
+			b[k] = 2 * imag(Frac)
+			c[k] = -real(rₖ)
+			d[k] = -imag(rₖ)
+		else
+			if k == J
+				a[k] = real(Frac)
+				b[k] = 0.0
+				c[k] = -real(rₖ)
+				d[k] = 0.0
+			end
+		end
 	end
 	variance = sum(a)
 	va = σ² / variance
@@ -218,7 +215,7 @@ function calculate(f, model::CARMA)
 		den += α[j] * ωi .^ (j - 1)
 	end
 
-	return abs.(num ./ den) .^ 2 / abs(get_normalisation(model)) * model.σ² / 2
+	return abs.(num ./ den) .^ 2 * model.σ² 
 end
 
 @doc raw"""
