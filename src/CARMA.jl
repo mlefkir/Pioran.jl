@@ -173,7 +173,7 @@ Convert the roots of a polynomial to its coefficients.
 # Returns
 - `c::Vector{Complex}`: Coefficients of the polynomial.
 """
-function roots2coeffs(r::Vector{T}) where T
+function roots2coeffs(r) 
 	P = fromroots(r)
 	return P.coeffs
 end
@@ -189,7 +189,7 @@ Convert the coefficients of a quadratic polynomial to its roots.
 # Returns
 - `r::Vector{Complex}`: Roots of the polynomial.
 """
-function quad2roots(quad::Vector{T}) where T
+function quad2roots(quad)
 	n = size(quad, 1)#length(quad)
 	r = zeros(Complex, n)
 	if n % 2 == 1

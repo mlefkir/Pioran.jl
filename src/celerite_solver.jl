@@ -1,4 +1,17 @@
 using Pioran: SumOfSemiSeparable
+using LinearAlgebra
+using LoopVectorization
+
+# Precompute cos and sin values for efficiency
+@inline function precompute_trig!(cos_vals, sin_vals, d, τ)
+   @inbounds for j in 1:length(d)
+        @inbounds for n in 1:length(τ)
+            dt = d[j] * τ[n]
+            cos_vals[j, n] = cos(dt)
+            sin_vals[j, n] = sin(dt)
+        end
+    end
+end
 
 """
      init_semi_separable(a, b, c, d, τ, σ2)
@@ -8,7 +21,7 @@ U,V are the rank-R matrices, D is the diagonal matrix and ϕ is the matrix of th
 
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractVector,
+@inline function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractVector,
     d::AbstractVector, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
     D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix)
 
@@ -19,35 +32,38 @@ function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractV
     # number of data points
     N::Int64 = length(τ)
 
+    T = eltype(a)
+
     # initialise matrices and vectors
     # it is faster to access the columns
     D[1] = suma + σ2[1]
     dn = D[1]
     buff = 1.0 / dn
-    τ1 = τ[1]
 
-    # initialise first row
-    for j in 1:J
-        co = cos(d[j] * τ1)
-        si = sin(d[j] * τ1)
+    cos_vals = Matrix{T}(undef, J, N)
+    sin_vals = Matrix{T}(undef, J, N)
+    precompute_trig!(cos_vals, sin_vals, d, τ)
 
-        V[2j, 1, 1] = si * buff
+    @simd for j in 1:J
+        co = cos_vals[j, 1]
+        si = sin_vals[j, 1]
+
+        V[2j, 1] = si * buff
         V[2j-1, 1] = co * buff
 
-        U[2j, 1, 1] = a[j] * si - b[j] * co
+        U[2j, 1] = a[j] * si - b[j] * co
         U[2j-1, 1] = a[j] * co + b[j] * si
     end
 
     @inbounds for n in 2:N
 
         s = 0.0
-        τn = τ[n]
-        dτ = τn - τ[n-1]
+        dτ = τ[n] - τ[n-1]
 
         # initialise the U,V and ϕ matrices
-        @inbounds for j in 1:J
-            co = cos(d[j] * τn)
-            si = sin(d[j] * τn)
+        @simd for j in 1:J
+            co = cos_vals[j, n]
+            si = sin_vals[j, n]
             ec = exp(-c[j] * dτ)
 
             ϕ[2j, n-1] = ec
@@ -63,7 +79,7 @@ function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractV
         # use the property that S_n is symmetric to fill only the lower triangle
         # compute the triple product U*S*U and the sum for D at the same time
         # no Float64 order is needed for the computation
-        @inbounds for j in 1:R
+        @simd for j in 1:R
             uj = U[j, n]
             ϕnj = ϕ[j, n-1]
             vn = V[j, n-1]
@@ -89,7 +105,7 @@ function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractV
         dn = suma + σ2[n] - s
         D[n] = dn
         # update V ( which is W in the paper )
-        for j in 1:R
+        @simd for j in 1:R
             V[j, n] /= dn
 
         end
