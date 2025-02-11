@@ -21,7 +21,7 @@ U,V are the rank-R matrices, D is the diagonal matrix and ϕ is the matrix of th
 
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-@inline function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractVector,
+@inline function init_semi_separable2!(a::AbstractVector, b::AbstractVector, c::AbstractVector,
     d::AbstractVector, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
     D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix)
 
@@ -106,6 +106,102 @@ See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....1
         D[n] = dn
         # update V ( which is W in the paper )
         @simd for j in 1:R
+            V[j, n] /= dn
+
+        end
+    end
+end
+"""
+     init_semi_separable(a, b, c, d, τ, σ2)
+
+Initialise the matrices and vectors needed for the celerite algorithm.
+U,V are the rank-R matrices, D is the diagonal matrix and ϕ is the matrix of the exponential terms.
+
+See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
+"""
+
+function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractVector,
+    d::AbstractVector, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
+    D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix)
+
+    J::Int64 = length(a)
+    R::Int64 = 2 * J
+    # sum of a coefficients
+    suma = sum(a)
+    # number of data points
+    N::Int64 = length(τ)
+
+    # initialise matrices and vectors
+    # it is faster to access the columns
+    D[1] = suma + σ2[1]
+    dn = D[1]
+    buff = 1.0 / dn
+    τ1 = τ[1]
+
+    # initialise first row
+    for j in 1:J
+        co = cos(d[j] * τ1)
+        si = sin(d[j] * τ1)
+
+        V[2j, 1, 1] = si * buff
+        V[2j-1, 1] = co * buff
+
+        U[2j, 1, 1] = a[j] * si - b[j] * co
+        U[2j-1, 1] = a[j] * co + b[j] * si
+    end
+
+    @inbounds for n in 2:N
+
+        s = 0.0
+        τn = τ[n]
+        dτ = τn - τ[n-1]
+
+        # initialise the U,V and ϕ matrices
+        @inbounds for j in 1:J
+            co = cos(d[j] * τn)
+            si = sin(d[j] * τn)
+            ec = exp(-c[j] * dτ)
+
+            ϕ[2j, n-1] = ec
+            ϕ[2j-1, n-1] = ec
+
+            U[2j, n] = a[j] * si - b[j] * co
+            U[2j-1, n] = a[j] * co + b[j] * si
+
+            V[2j, n] = si
+            V[2j-1, n] = co
+        end
+
+        # use the property that S_n is symmetric to fill only the lower triangle
+        # compute the triple product U*S*U and the sum for D at the same time
+        # no Float64 order is needed for the computation
+        @inbounds for j in 1:R
+            uj = U[j, n]
+            ϕnj = ϕ[j, n-1]
+            vn = V[j, n-1]
+            dn = D[n-1] * vn
+            vnj = V[j, n]
+
+            @inbounds for k in 1:j-1
+                uk = U[k, n]
+                r = ϕnj * ϕ[k, n-1] * (S_n[j, k] + dn * V[k, n-1])
+                S_n[j, k] = r
+                v = uj * r
+                V[k, n] -= v
+                vnj -= uk * r
+                s += 2 * v * uk # 2 times because of symmetry
+            end
+            S_n[j, j] = ϕnj^2 * (S_n[j, j] + dn * vn)
+            r = S_n[j, j] * uj
+
+            s += r * uj
+            V[j, n] = vnj - r
+        end
+        # compute the diagonal element
+        dn = suma + σ2[n] - s
+        D[n] = dn
+        # update V ( which is W in the paper )
+        for j in 1:R
             V[j, n] /= dn
 
         end
@@ -226,6 +322,30 @@ function logl(a, b, c, d, τ, y, σ2)
     D = Vector{T}(undef, N)
 
     init_semi_separable!(a, b, c, d, τ, σ2, V, D, U, ϕ, S_n)
+
+    z = Vector{T}(undef, N)
+
+    logdetD = solve_prec!(z, y, U, V, D, ϕ)
+    return -logdetD / 2 - N * log(2π) / 2 - y'z / 2
+end
+
+function logl2(a, b, c, d, τ, y, σ2)
+    N::Int64 = length(y)
+
+    # initialise the matrices and vectors
+    T = eltype(a)
+    # number of terms
+    J::Int64 = length(a)
+    # number of rows in U and V, twice the number of terms
+    R::Int64 = 2 * J
+
+    S_n = zeros(T, R, R)    
+    ϕ = Matrix{T}(undef, R, N - 1)
+    U = Matrix{T}(undef, R, N)
+    V = Matrix{T}(undef, R, N)
+    D = Vector{T}(undef, N)
+
+    init_semi_separable2!(a, b, c, d, τ, σ2, V, D, U, ϕ, S_n)
 
     z = Vector{T}(undef, N)
 
