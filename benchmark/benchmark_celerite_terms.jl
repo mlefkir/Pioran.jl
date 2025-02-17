@@ -1,4 +1,3 @@
-
 using BenchmarkTools
 using DelimitedFiles
 using Pioran
@@ -22,34 +21,43 @@ t, y, yerr = collect.(eachcol(A))
 rng = MersenneTwister(1234)
 
 function loglikelihood(a, b, c, d, t, y, σ²)
-	return Pioran.logl(a, b, c, d, t, y, σ²)
+    return Pioran.logl(a, b, c, d, t, y, σ²)
 end
 
 function loglikelihood2(a, b, c, d, t, y, σ²)
-	return Pioran.logl2(a, b, c, d, t, y, σ²)
+    return Pioran.logl2(a, b, c, d, t, y, σ²)
 end
 a, b, c, d = collect.(eachcol(rand(rng, Float64, (maximum(n_components), 4))))
 
+a .*= 5
 for J in n_components
-	SUITE["inference"][string(J)] = BenchmarkGroup()
+    SUITE["inference"][string(J)] = BenchmarkGroup()
     SUITE["inference2"][string(J)] = BenchmarkGroup()
 
-	for N in n_samples
-		SUITE["inference"][string(J)][N] = @benchmarkable (loglikelihood($a[1:$J],
-                                                            $b[1:$J],
-                                                            $c[1:$J],
-                                                            $d[1:$J],
-                                                            t[1:$N],
-                                                            y[1:$N],
-                                                            yerr[1:$N]))
-        SUITE["inference2"][string(J)][N] = @benchmarkable (loglikelihood2($a[1:$J],
-                                                            $b[1:$J],
-                                                            $c[1:$J],
-                                                            $d[1:$J],
-                                                            t[1:$N],
-                                                            y[1:$N],
-                                                            yerr[1:$N]))
-	end
+    for N in n_samples
+        SUITE["inference"][string(J)][N] = @benchmarkable (
+            loglikelihood(
+                $a[1:$J],
+                $b[1:$J],
+                $c[1:$J],
+                $d[1:$J],
+                t[1:$N],
+                y[1:$N],
+                yerr[1:$N]
+            )
+        )
+        SUITE["inference2"][string(J)][N] = @benchmarkable (
+            loglikelihood2(
+                $a[1:$J],
+                $b[1:$J],
+                $c[1:$J],
+                $d[1:$J],
+                t[1:$N],
+                y[1:$N],
+                yerr[1:$N]
+            )
+        )
+    end
 end
 tune!(SUITE)
 

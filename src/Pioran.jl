@@ -13,6 +13,7 @@ using DelimitedFiles
 using StatsBase
 using ProgressMeter
 using Polynomials
+using StructArrays
 
 export SHO, Celerite, Exp, CARMA
 export SingleBendingPowerLaw, DoubleBendingPowerLaw, DoubleBendingPowerLaw_Bis, approx, TripleBendingPowerLaw

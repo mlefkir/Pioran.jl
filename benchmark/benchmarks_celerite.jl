@@ -1,4 +1,3 @@
-
 using BenchmarkTools
 using DelimitedFiles
 using Pioran
@@ -22,8 +21,8 @@ t, y, yerr = collect.(eachcol(A))
 # parameter values
 ν = 1.0
 α₁, f₁, α₂ = 0.82, 0.01, 3.3
-c = 1e-5
-variance = var(y, corrected=true)
+c = 1.0e-5
+variance = var(y, corrected = true)
 μ = mean(y)
 
 # define the model
@@ -35,13 +34,13 @@ variance = var(y, corrected=true)
     max_f_b = fM / 10
 
     # Prior distribution for the parameters
-    α₁ ~ Uniform(-0.25, 2.)
+    α₁ ~ Uniform(-0.25, 2.0)
     f₁ ~ LogUniform(min_f_b, max_f_b)
     α₂ ~ Uniform(1.5, 4)
     variance ~ LogNormal(log(0.5), 1.25)
     ν ~ Gamma(2, 0.5)
     μ ~ LogNormal(log(3), 1)
-    c ~ LogUniform(1e-7, minimum(y))
+    c ~ LogUniform(1.0e-7, minimum(y))
 
     # Make the data Gaussian
     σ² = ν .* σ .^ 2 ./ (y .- c) .^ 2
@@ -64,11 +63,9 @@ end
 for J in n_components
     SUITE["inference"][string(J)] = BenchmarkGroup()
     for N in n_samples
-
-
-        SUITE["inference"][string(J)][N] = @benchmarkable (loglikelihood(GP_inference(y[1:$N], t[1:$N], yerr[1:$N], $J), (α₁=α₁, f₁=f₁, α₂=α₂, variance=variance, ν=ν, μ=μ, c=c)))
+        SUITE["inference"][string(J)][N] = @benchmarkable (loglikelihood(GP_inference(y[1:$N], t[1:$N], yerr[1:$N], $J), (α₁ = α₁, f₁ = f₁, α₂ = α₂, variance = variance, ν = ν, μ = μ, c = c)))
     end
 end
 tune!(SUITE)
 
-#results = run(SUITE, verbose=true, seconds=1)
+results = run(SUITE, verbose = true, seconds = 1)
