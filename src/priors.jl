@@ -3,8 +3,8 @@
     TwoUniformDependent(a, b, c, ϵ)
     TwoUniformDependent(a, b, c) (constructor with default ϵ = 1e-10)
 
-Multivariate distribution to model two random variables  where the first one is given by U[a,b] and the second one is given by U[x,c], 
-where x is a random variable sampled from the first distribution. 
+Multivariate distribution to model two random variables  where the first one is given by U[a,b] and the second one is given by U[x,c],
+where x is a random variable sampled from the first distribution.
 
 - `a`: lower bound of the first distribution
 - `b`: upper bound of the first distribution
@@ -13,7 +13,7 @@ where x is a random variable sampled from the first distribution.
 
 This means that the lower bound of the second distribution is dependent on the value of the first distribution.This is implemented to overcome the limitations of the current Turing's implementation for dependent priors with dynamic support.
 See the following issues for more details: [[1]](https://github.com/TuringLang/Turing.jl/issues/1558),[[2]](https://github.com/TuringLang/Turing.jl/issues/1708),[[3]](https://github.com/TuringLang/Turing.jl/issues/1270).
-    
+
 # Example
 ```jldoctest
 julia> using Pioran, Distributions
@@ -33,16 +33,16 @@ struct TwoUniformDependent <: ContinuousMultivariateDistribution
     ϵ::Float64
 
     function TwoUniformDependent(a, b, c, ϵ)
-        if a>=b
+        return if a >= b
             throw(ArgumentError("a must be less than b"))
-        elseif b>=c
+        elseif b >= c
             throw(ArgumentError("b must be less than c"))
         else
             new(a, b, c, ϵ)
         end
     end
 end
-TwoUniformDependent(a, b, c) = TwoUniformDependent(a, b, c, 1e-10)
+TwoUniformDependent(a, b, c) = TwoUniformDependent(a, b, c, 1.0e-10)
 
 @doc raw"""
     ThreeUniformDependent(a, b, c, ϵ)
@@ -58,7 +58,7 @@ third one x3 is given by U[x2,c]. where a<b<c.
 
 This means that the lower bound of the second distribution is dependent on the value of the first distribution and so on... This is implemented to overcome the limitations of the current Turing's implementation for dependent priors with dynamic support.
 See the following issues for more details: [[1]](https://github.com/TuringLang/Turing.jl/issues/1558),[[2]](https://github.com/TuringLang/Turing.jl/issues/1708),[[3]](https://github.com/TuringLang/Turing.jl/issues/1270).
-    
+
 """
 struct ThreeUniformDependent <: ContinuousMultivariateDistribution
     a::Float64
@@ -66,19 +66,19 @@ struct ThreeUniformDependent <: ContinuousMultivariateDistribution
     c::Float64
     ϵ::Float64
     function ThreeUniformDependent(a, b, c, ϵ)
-        if a>=b
+        return if a >= b
             throw(ArgumentError("a must be less than b"))
-        elseif b>=c
+        elseif b >= c
             throw(ArgumentError("b must be less than c"))
         else
             new(a, b, c, ϵ)
         end
     end
 end
-ThreeUniformDependent(a, b, c) = ThreeUniformDependent(a, b, c, 1e-10)
+ThreeUniformDependent(a, b, c) = ThreeUniformDependent(a, b, c, 1.0e-10)
 
 @doc raw"""
-    TwoLogUniformDependent(a, b, ϵ) 
+    TwoLogUniformDependent(a, b, ϵ)
     TwoLogUniformDependent(a, b) (constructor with default ϵ = 1e-10
 
 Multivariate distribution to model three random variables  where the first one x1 is given by log-U[a,b] and the second one x2 is given by log-U[x1,b].
@@ -89,24 +89,24 @@ Multivariate distribution to model three random variables  where the first one x
 
 This means that the lower bound of the second distribution is dependent on the value of the first distribution. This is implemented to overcome the limitations of the current Turing's implementation for dependent priors with dynamic support.
 See the following issues for more details: [[1]](https://github.com/TuringLang/Turing.jl/issues/1558),[[2]](https://github.com/TuringLang/Turing.jl/issues/1708),[[3]](https://github.com/TuringLang/Turing.jl/issues/1270).
-    
+
 """
 struct TwoLogUniformDependent <: ContinuousMultivariateDistribution
     a::Float64
     b::Float64
     ϵ::Float64
     function TwoLogUniformDependent(a, b, ϵ)
-        if a==0 || b==0
+        return if a == 0 || b == 0
             throw(ArgumentError("a and b must be greater than 0"))
-        elseif a>=b
+        elseif a >= b
             throw(ArgumentError("a must be less than b"))
         else
             new(a, b, ϵ)
         end
-        
+
     end
 end
-TwoLogUniformDependent(a, b) = TwoLogUniformDependent(a, b, 1e-10)
+TwoLogUniformDependent(a, b) = TwoLogUniformDependent(a, b, 1.0e-10)
 
 function Distributions.rand(rng::Random.AbstractRNG, d::TwoUniformDependent)
     x = rand(rng, Uniform(d.a, d.b))
@@ -141,7 +141,7 @@ end
 
 """
     Bijectors.bijector(d::TwoUniformDependent)
-    
+
 Create a bijector for the TwoUniformDependent distribution. This is used to sample from the distribution using the Bijectors package.
 Adapted from the following issues [[1]](https://github.com/TuringLang/Turing.jl/issues/1558),[[2]](https://github.com/TuringLang/Turing.jl/issues/1708),[[3]](https://github.com/TuringLang/Turing.jl/issues/1270).
 """
