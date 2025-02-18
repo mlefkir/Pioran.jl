@@ -2,117 +2,6 @@ using Pioran: SumOfSemiSeparable
 using LinearAlgebra
 using LoopVectorization
 
-# Precompute cos and sin values for efficiency
-@inline function precompute_trig!(cos_vals, sin_vals, d, τ)
-    return @inbounds for j in 1:length(d)
-        @inbounds for n in 1:length(τ)
-            dt = d[j] * τ[n]
-            cos_vals[j, n] = cos(dt)
-            sin_vals[j, n] = sin(dt)
-        end
-    end
-end
-
-"""
-     init_semi_separable(a, b, c, d, τ, σ2)
-
-Initialise the matrices and vectors needed for the celerite algorithm.
-U,V are the rank-R matrices, D is the diagonal matrix and ϕ is the matrix of the exponential terms.
-
-See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
-"""
-@inline function init_semi_separable2!(
-        a::AbstractVector, b::AbstractVector, c::AbstractVector,
-        d::AbstractVector, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
-        D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix
-    )
-
-    J::Int64 = length(a)
-    R::Int64 = 2 * J
-    # sum of a coefficients
-    suma = sum(a)
-    # number of data points
-    N::Int64 = length(τ)
-
-    T = eltype(a)
-
-    # initialise matrices and vectors
-    # it is faster to access the columns
-    D[1] = suma + σ2[1]
-    dn = D[1]
-    buff = 1.0 / dn
-
-    cos_vals = Matrix{T}(undef, J, N)
-    sin_vals = Matrix{T}(undef, J, N)
-    precompute_trig!(cos_vals, sin_vals, d, τ)
-
-    @simd for j in 1:J
-        co = cos_vals[j, 1]
-        si = sin_vals[j, 1]
-
-        V[2j, 1] = si * buff
-        V[2j - 1, 1] = co * buff
-
-        U[2j, 1] = a[j] * si - b[j] * co
-        U[2j - 1, 1] = a[j] * co + b[j] * si
-    end
-
-    return @inbounds for n in 2:N
-
-        s = 0.0
-        dτ = τ[n] - τ[n - 1]
-
-        # initialise the U,V and ϕ matrices
-        for j in 1:J
-            co = cos_vals[j, n]
-            si = sin_vals[j, n]
-            ec = exp(-c[j] * dτ)
-
-            ϕ[2j, n - 1] = ec
-            ϕ[2j - 1, n - 1] = ec
-
-            U[2j, n] = a[j] * si - b[j] * co
-            U[2j - 1, n] = a[j] * co + b[j] * si
-
-            V[2j, n] = si
-            V[2j - 1, n] = co
-        end
-
-        # use the property that S_n is symmetric to fill only the lower triangle
-        # compute the triple product U*S*U and the sum for D at the same time
-        # no Float64 order is needed for the computation
-        @simd for j in 1:R
-            uj = U[j, n]
-            ϕnj = ϕ[j, n - 1]
-            vn = V[j, n - 1]
-            dn = D[n - 1] * vn
-            vnj = V[j, n]
-
-            @inbounds for k in 1:(j - 1)
-                uk = U[k, n]
-                r = ϕnj * ϕ[k, n - 1] * (S_n[j, k] + dn * V[k, n - 1])
-                S_n[j, k] = r
-                v = uj * r
-                V[k, n] -= v
-                vnj -= uk * r
-                s += 2 * v * uk # 2 times because of symmetry
-            end
-            S_n[j, j] = ϕnj^2 * (S_n[j, j] + dn * vn)
-            r = S_n[j, j] * uj
-
-            s += r * uj
-            V[j, n] = vnj - r
-        end
-        # compute the diagonal element
-        dn = suma + σ2[n] - s
-        D[n] = dn
-        # update V ( which is W in the paper )
-        @simd for j in 1:R
-            V[j, n] /= dn
-
-        end
-    end
-end
 """
      init_semi_separable(a, b, c, d, τ, σ2)
 
@@ -147,10 +36,10 @@ function init_semi_separable!(
         co = cos(d[j] * τ1)
         si = sin(d[j] * τ1)
 
-        V[2j, 1, 1] = si * buff
+        V[2j, 1] = si * buff
         V[2j - 1, 1] = co * buff
 
-        U[2j, 1, 1] = a[j] * si - b[j] * co
+        U[2j, 1] = a[j] * si - b[j] * co
         U[2j - 1, 1] = a[j] * co + b[j] * si
     end
 
@@ -225,7 +114,7 @@ Forward and backward substitution of the celerite algorithm.
 
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-function solve_prec!(
+@inline function solve_prec!(
         z::AbstractVector, y::AbstractVector,
         U::AbstractMatrix, W::AbstractMatrix, D::AbstractVector, ϕ::AbstractMatrix
     )
@@ -271,6 +160,96 @@ function solve_prec!(
 end
 
 """
+    get_values!(a, b, c, d, zp, U, V, P, D, t)
+
+Compute the values of the matrices and vectors needed for the celerite algorithm.
+This is a vectorised version of the `init_semi_separable!` and `solve_prec!` functions.
+This function appears to be faster than the two previous functions when J > 16 but it also uses more memory.
+
+More study of this implementation is needed.
+
+"""
+@inline function get_values!(
+        a::AbstractVector, b::AbstractVector, c::AbstractVector, d::AbstractVector
+        , zp::AbstractVector, U::AbstractMatrix, V::AbstractMatrix, P::AbstractMatrix, D::AbstractVector, t::AbstractVector
+    )
+    R, N = size(U)
+    T = eltype(U)
+    S_n = zeros(T, R, R)
+    f = zeros(T, R)
+    return @views  begin
+        odd = 1:2:R
+        even = 2:2:R
+        dτ = diff(t)
+        td = @turbo @. t' * d
+        co = @turbo @. cos(td)
+        si = @turbo @. sin(td)
+        ec = @turbo @. exp(-dτ' * c)
+        U[odd, :] = @turbo @. a * co + b * si
+        U[even, :] = @turbo @. a * si - b * co
+        V[odd, :] = co
+        V[even, :] = si
+        P[even, :] = ec
+        P[odd, :] = ec
+        V[:, 1] /= D[1]
+        @inbounds for n in 2:N
+            un = U[:, n]
+            vn1 = V[:, n - 1]
+            pn1 = P[:, n - 1]
+            @turbo @. S_n += D[n - 1] * vn1 * vn1'
+            @turbo @. S_n *= pn1 * pn1'
+            buff = S_n * un
+            D[n] -= (un)' * buff
+            V[:, n] -= buff
+            V[:, n] /= D[n]
+            @turbo @. f += (vn1) * zp[n - 1]
+            @turbo @. f *= pn1
+            zp[n] -= (un)' * f
+        end
+        f = zeros(T, R)
+        zp[N] /= D[N]
+        @inbounds for n in (N - 1):-1:1
+            @turbo  @. f += (U[:, n + 1]) * zp[n + 1]
+            @turbo @. f *= (P[:, n])
+            zp[n] /= D[n]
+            zp[n] -= (V[:, n])' * f
+        end
+    end
+end
+
+"""
+    compute_nll(t, y, σ², a, b, c, d)
+
+    Compute the likelihood using the vectorised implementation in `get_values!`.
+
+    Still experimental.
+"""
+@inline function compute_nll(t, y, σ², a, b, c, d)
+    N = length(y)
+    J = length(a)
+    T = eltype(a)
+    R = 2 * J
+    U = Matrix{T}(undef, R, N)
+    V = Matrix{T}(undef, R, N)
+    P = Matrix{T}(undef, R, N - 1)
+    suma = sum(a)
+
+    D = @turbo @. σ² + suma
+    zp = y[:]
+
+    get_values!(
+        a, b, c, d, zp,
+        U,
+        V,
+        P,
+        D,
+        t
+    )
+    𝓛 = @turbo -sum(log.(D)) / 2 - N * log(2π) / 2 - y'zp / 2
+    return 𝓛
+end
+
+"""
     log_likelihood(cov, τ, y, σ2)
 
 Compute the log-likelihood of a semi-separable covariance function using the celerite algorithm.
@@ -282,9 +261,9 @@ Compute the log-likelihood of a semi-separable covariance function using the cel
 - `σ2::Vector`: the measurement variances
 
 """
-@inline function log_likelihood(cov::SumOfSemiSeparable, τ, y, σ2)
-    a, b, c, d = cov.cov.a, cov.cov.b, cov.cov.c, cov.cov.d
-    return logl(a, b, c, d, τ, y, σ2)
+@inline function log_likelihood(cov::SumOfCelerite, τ, y, σ2)
+    return logl(cov.a, cov.b, cov.c, cov.d, τ, y, σ2)
+    #return compute_nll(τ, y, σ2, cov.cov.a, cov.cov.b, cov.cov.c, cov.cov.d)
 end
 
 @inline function log_likelihood(cov::CARMA, τ, y, σ2)

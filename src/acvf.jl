@@ -6,27 +6,52 @@
 Abstract type for semi-separable covariance functions.
 """
 abstract type SemiSeparable <: KernelFunctions.SimpleKernel end
-
+abstract type SumOfTerms <: SemiSeparable end
 """
     SumOfSemiSeparable
 
 Abstract type for sum of semi-separable covariance functions.
 It stores the individual covariance functions and the celerite coefficients (a,b,c,d).
 """
-# struct SumOfSemiSeparable{Tcov<:Vector{<:SemiSeparable}} <: SemiSeparable
-#     cov::Tcov
-#     a
-#     b
-#     c
-#     d
-# end
-struct SumOfSemiSeparable{Tcov <: StructArray{<:SemiSeparable}} <: SemiSeparable
+struct SumOfSemiSeparable{Tcov <: Vector{<:SemiSeparable}} <: SumOfTerms
     cov::Tcov
+    a::AbstractVector
+    b::AbstractVector
+    c::AbstractVector
+    d::AbstractVector
 end
 
-function celerite_coefs(covariance::SumOfSemiSeparable)
-    return covariance.cov.a, covariance.cov.b, covariance.cov.c, covariance.cov.d
+"""
+    SumOfCelerite{Tcov <: Vector{<:Celerite},T<:Real} <: SemiSeparable
+
+Represents the sum of celerite covariance functions.
+It appears to be faster than the SumOfSemiSeparable model but more restrictive as
+the covariance functions must all be celerite.
+
+Constructor:
+    SumOfCelerite(cov::StructArray{Celerite}(a,b,c,d))
+    SumOfCelerite(a, b, c, d)
+"""
+struct SumOfCelerite{Tcov <: StructArray{<:SemiSeparable}} <: SumOfTerms
+    cov::Tcov
+    a::AbstractVector
+    b::AbstractVector
+    c::AbstractVector
+    d::AbstractVector
+
+    function SumOfCelerite(cov::Tcov) where {Tcov <: StructArray{<:SemiSeparable}}
+        return new{Tcov}(cov, cov.a, cov.b, cov.c, cov.d)
+    end
+
+    function SumOfCelerite(a::AbstractVector, b::AbstractVector, c::AbstractVector, d::AbstractVector)
+        return new{StructArray{<:SemiSeparable}}(StructArray{Celerite}((a, b, c, d)), a, b, c, d)
+    end
 end
+
+function celerite_coefs(covariance::SumOfCelerite)
+    return covariance.a, covariance.b, covariance.c, covariance.d
+end
+
 """
      +(::SemiSeparable, ::SemiSeparable)
 
@@ -90,38 +115,42 @@ end
 
     Get the celerite coefficients
 """
-# function celerite_coefs(covariance::SumOfSemiSeparable)
-#     J = length(covariance.cov)
-#     a_1, _, _, _ = celerite_coefs(covariance.cov[1])
-#     T = eltype(a_1)
-#     a, b, c, d = zeros(T, J), zeros(T, J), zeros(T, J), zeros(T, J)
+function celerite_coefs(covariance::SumOfSemiSeparable)
+    J = length(covariance.cov)
+    a_1, _, _, _ = celerite_coefs(covariance.cov[1])
+    T = eltype(a_1)
+    a, b, c, d = zeros(T, J), zeros(T, J), zeros(T, J), zeros(T, J)
 
-#     @inbounds for j in 1:J
-#         a[j], b[j], c[j], d[j] = celerite_coefs(covariance.cov[j])
-#     end
-#     return a, b, c, d
-# end
+    @inbounds for j in 1:J
+        a[j], b[j], c[j], d[j] = celerite_coefs(covariance.cov[j])
+    end
+    return a, b, c, d
+end
 
 # Define the kernel functions for the SumOfSemiSeparable model
 KernelFunctions.metric(R::SumOfSemiSeparable) = Euclidean()
 
-# # Define the kernel functions for the SumOfSemiSeparable model
-# function KernelFunctions.kappa(R::SumOfSemiSeparable, τ::Real)
-#     J = length(R.cov)
-#     K = KernelFunctions.kappa(R.cov[1], τ)
-#     for j in 2:J
-#         K += KernelFunctions.kappa(R.cov[j], τ)
-#     end
-#     return K
-# end
+## For the SumOfCelerite model
+# Define the kernel functions for the SumOfCelerite model
+KernelFunctions.metric(R::SumOfTerms) = Euclidean()
 
-# # Define the kernel functions for the SumOfSemiSeparable model
-# function KernelFunctions.ScaledKernel(R::SumOfSemiSeparable, number::Real=1.0)
+# Define the kernel functions for the SumOfCelerite model
+function KernelFunctions.kappa(R::SumOfTerms, τ::Real)
+    return sum(map(x -> KernelFunctions.kappa(x, τ), R.cov))
+end
 
-#     J = length(R.cov)
-#     for j in 1:J
-#         R.cov[j] = ScaledKernel(R.cov[j], number)
-#     end
+# Define the kernel functions for the SumOfSemiSeparable model
+function KernelFunctions.ScaledKernel(R::SumOfSemiSeparable, number::Real = 1.0)
 
-#     return SumOfSemiSeparable(R.cov, number * R.a, number * R.b, R.c, R.d)
-# end
+    J = length(R.cov)
+    for j in 1:J
+        R.cov[j] = ScaledKernel(R.cov[j], number)
+    end
+
+    return SumOfSemiSeparable(R.cov, number * R.a, number * R.b, R.c, R.d)
+end
+
+# Define the kernel functions for the SumOfCelerite model
+function KernelFunctions.ScaledKernel(R::SumOfCelerite, number::Real = 1.0)
+    return SumOfCelerite(map(x -> ScaledKernel(x, number), R.cov))
+end

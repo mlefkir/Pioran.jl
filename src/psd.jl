@@ -282,12 +282,10 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
         end
         variance = sum(amplitudes)
 
-        # covariance = SHO(var * amplitudes[1] / variance, 2π * spectral_points[1], 1 / √2)
-        # for i in 2:n_components
-        #     covariance += SHO(var * amplitudes[i] / variance, 2π * spectral_points[i], 1 / √2)
-        # end
+        a = var .* amplitudes ./ variance
+        c = √2 * π .* spectral_points
 
-        covariance = SumOfSemiSeparable(StructArray{Celerite}((var .* amplitudes ./ variance, var .* amplitudes ./ variance, √2 * π .* spectral_points, √2 * π .* spectral_points)))
+        covariance = SumOfCelerite(a, a, c, c)
     elseif basis_function == "DRWCelerite"
 
         ω = 2π * spectral_points
