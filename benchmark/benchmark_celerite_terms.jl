@@ -8,8 +8,9 @@ const SUITE = BenchmarkGroup()
 
 SUITE["inference"] = BenchmarkGroup([])
 SUITE["inference2"] = BenchmarkGroup([])
+SUITE["inference_vect"] = BenchmarkGroup([])
 
-n_samples = 2 .^ (5:15)
+n_samples = 2 .^ (5:16)
 n_components = 2 .^ (1:6)
 
 
@@ -27,12 +28,18 @@ end
 function loglikelihood2(a, b, c, d, t, y, σ²)
     return Pioran.logl2(a, b, c, d, t, y, σ²)
 end
+
+function loglikelihood3(a, b, c, d, t, y, σ²)
+    return Pioran.compute_nll(t, y, σ², a, b, c, d)
+end
+
 a, b, c, d = collect.(eachcol(rand(rng, Float64, (maximum(n_components), 4))))
 
 a .*= 5
 for J in n_components
     SUITE["inference"][string(J)] = BenchmarkGroup()
     SUITE["inference2"][string(J)] = BenchmarkGroup()
+    SUITE["inference_vect"][string(J)] = BenchmarkGroup()
 
     for N in n_samples
         SUITE["inference"][string(J)][N] = @benchmarkable (
@@ -57,8 +64,19 @@ for J in n_components
                 yerr[1:$N]
             )
         )
+        SUITE["inference_vect"][string(J)][N] = @benchmarkable (
+            loglikelihood3(
+                $a[1:$J],
+                $b[1:$J],
+                $c[1:$J],
+                $d[1:$J],
+                t[1:$N],
+                y[1:$N],
+                yerr[1:$N]
+            )
+        )
     end
 end
 tune!(SUITE)
 
-results = run(SUITE, verbose = true, seconds = 1)
+#results = run(SUITE, verbose = true, seconds = 1)
