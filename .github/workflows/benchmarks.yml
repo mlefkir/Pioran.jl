@@ -1,4 +1,4 @@
-name: Julia Example with BenchmarkTools.jl
+name: Benchmarking the code
 on:
   push:
     branches:
@@ -24,10 +24,11 @@ jobs:
           - x64
     steps:
       - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v1
+      - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+      - uses: julia-actions/julia-buildpkg@v1
       - uses: actions/cache@v4
         env:
           cache-name: cache-artifacts
@@ -43,8 +44,9 @@ jobs:
         run: |
           julia --project --color=yes -e '
             using Pkg;
-            Pkg.instantiate();Pkg.add("BenchmarkTools",target=:weakdeps);
+            Pkg.instantiate();Pkg.add("BenchmarkTools");
             include("benchmark/benchmark_celerite_terms.jl")'
+        working-directory: results
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -53,12 +55,13 @@ jobs:
           output-file-path: benchmark/output.json
           # Use personal access token instead of GITHUB_TOKEN due to https://github.community/t/github-action-not-triggering-gh-pages-upon-push/16096
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          auto-push: true
+          auto-push: false
           # Show alert with commit comment on detecting possible performance regression
           alert-threshold: '200%'
           comment-on-alert: true
-          fail-on-alert: true
+          fail-on-alert: false
           summary-always: true
+          #push_options: --force
           #alert-comment-cc-users: '@mlefkir'
 
       # - name: Store benchmark result - separate results repo
