@@ -45,8 +45,8 @@ jobs:
           julia --project --color=yes -e '
             using Pkg;
             Pkg.instantiate();Pkg.add("BenchmarkTools");
-            include("benchmark/benchmark_celerite_terms.jl")'
-        working-directory: results
+            include("benchmark_celerite_terms.jl")'
+        working-directory: benchmark
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
