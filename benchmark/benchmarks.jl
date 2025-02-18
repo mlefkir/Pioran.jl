@@ -77,6 +77,6 @@ for J in n_components
 end
 tune!(SUITE)
 
-results = run(SUITE, verbose = true) #, seconds = 1)
+#results = run(SUITE, verbose = true) #, seconds = 1)
 
-BenchmarkTools.save("benchmark/output.json", median(results))
+#BenchmarkTools.save("benchmark/output.json", median(results))
