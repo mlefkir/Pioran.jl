@@ -316,30 +316,6 @@ function logl(a, b, c, d, τ, y, σ2)
     return -logdetD / 2 - N * log(2π) / 2 - y'z / 2
 end
 
-function logl2(a, b, c, d, τ, y, σ2)
-    N::Int64 = length(y)
-
-    # initialise the matrices and vectors
-    T = eltype(a)
-    # number of terms
-    J::Int64 = length(a)
-    # number of rows in U and V, twice the number of terms
-    R::Int64 = 2 * J
-
-    S_n = zeros(T, R, R)
-    ϕ = Matrix{T}(undef, R, N - 1)
-    U = Matrix{T}(undef, R, N)
-    V = Matrix{T}(undef, R, N)
-    D = Vector{T}(undef, N)
-
-    init_semi_separable2!(a, b, c, d, τ, σ2, V, D, U, ϕ, S_n)
-
-    z = Vector{T}(undef, N)
-
-    logdetD = solve_prec!(z, y, U, V, D, ϕ)
-    return -logdetD / 2 - N * log(2π) / 2 - y'z / 2
-end
-
 """
     predict(cov, τ, t, y, σ2)
 
