@@ -43,9 +43,8 @@ jobs:
         run: |
           julia --project --color=yes -e '
             using Pkg;
-            Pkg.instantiate();Pkg.add(["BenchmarkTools","DelimitedFiles","Distributions"]);
+            Pkg.instantiate();Pkg.add("BenchmarkTools",target=:weakdeps);
             include("benchmark/benchmark_celerite_terms.jl")'
-
       - name: Store benchmark result
         uses: benchmark-action/github-action-benchmark@v1
         with:
@@ -59,6 +58,7 @@ jobs:
           alert-threshold: '200%'
           comment-on-alert: true
           fail-on-alert: true
+          summary-always: true
           #alert-comment-cc-users: '@mlefkir'
 
       # - name: Store benchmark result - separate results repo
