@@ -1,7 +1,7 @@
-using PkgBenchmark, BenchmarkTools, CairoMakie
+using BenchmarkTools, CairoMakie
 using DelimitedFiles
 
-results = readresults("results_celerite_terms.json")
+results = BenchmarkTools.load("/home/mehdy/results_Pioran@main.json")
 suite = results.benchmarkgroup["inference"]
 med = median(suite)
 
