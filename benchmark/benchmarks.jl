@@ -35,7 +35,7 @@ end
 # parameter values
 ν = 1.0
 α₁, f₁, α₂ = 0.82, 0.01, 3.3
-c = 1.0e-5
+shift = 1.0e-5
 variance = var(y, corrected = true)
 μ = mean(y)
 
@@ -54,11 +54,11 @@ variance = var(y, corrected = true)
     variance ~ LogNormal(log(0.5), 1.25)
     ν ~ Gamma(2, 0.5)
     μ ~ LogNormal(log(3), 1)
-    c ~ LogUniform(1.0e-7, minimum(y))
+    shift ~ LogUniform(1.0e-7, minimum(y))
 
     # Make the data Gaussian
-    σ² = ν .* σ .^ 2 ./ (y .- c) .^ 2
-    y = log.(y .- c)
+    σ² = ν .* σ .^ 2 ./ (y .- shift) .^ 2
+    y = log.(y .- shift)
 
     # Define power spectral density function
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
@@ -100,13 +100,13 @@ for N in n_samples
         SUITE["pioran_likelihood"]["SHO"][string(J)][N] = @benchmarkable (
             Turing.loglikelihood(
                 model_GP(y[1:$N], t[1:$N], yerr[1:$N], $J, basis_function = "SHO"),
-                (α₁ = $α₁, f₁ = $f₁, α₂ = $α₂, variance = $variance, ν = $ν, μ = $μ, c = $c)
+                (α₁ = $α₁, f₁ = $f₁, α₂ = $α₂, variance = $variance, ν = $ν, μ = $μ, shift = $shift)
             )
         )
         SUITE["pioran_likelihood"]["DRWCelerite"][string(J)][N] = @benchmarkable (
             Turing.loglikelihood(
                 model_GP(y[1:$N], t[1:$N], yerr[1:$N], $J, basis_function = "DRWCelerite"),
-                (α₁ = $α₁, f₁ = $f₁, α₂ = $α₂, variance = $variance, ν = $ν, μ = $μ, c = $c)
+                (α₁ = $α₁, f₁ = $f₁, α₂ = $α₂, variance = $variance, ν = $ν, μ = $μ, shift = $shift)
             )
         )
     end
