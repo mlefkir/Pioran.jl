@@ -126,8 +126,10 @@ function test_approx_cov_DRWCelerite()
         va = variances[1]
         PS = SingleBendingPowerLaw(α₁, f₁, α₂)
         Rapprox = Pioran.approx(PS, f0, fM, J, va, basis_function = "DRWCelerite")
-        @test Rapprox isa Pioran.SumOfSemiSeparable
-        @test all([Rapprox.cov[i] isa Pioran.Celerite && Rapprox.cov[i + 1] isa Pioran.Exp for i in 1:2:2J])
+        @test Rapprox isa Pioran.SumOfCelerite
+        @test Rapprox isa Pioran.SumOfTerms
+        @test length(Rapprox.cov) == 2J
+        @test all([Rapprox.cov[i] isa Pioran.Celerite for i in 1:2J])
     end
 end
 

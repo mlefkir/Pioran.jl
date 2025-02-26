@@ -296,10 +296,15 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
         c = ω / 2
         d = √3 * c
 
-        covariance = Celerite(a[1], b[1], c[1], d[1]) + Exp(a[1], 2 * c[1])
-        for i in 2:n_components
-            covariance += Celerite(a[i], b[i], c[i], d[i]) + Exp(a[i], 2 * c[i])
-        end
+        aa = [a; a]
+        bb = [b; zeros(n_components)]
+        cc = [c; ω]
+        dd = [d; zeros(n_components)]
+        covariance = SumOfCelerite(aa, bb, cc, dd)
+        # covariance = Celerite(a[1], b[1], c[1], d[1]) + Exp(a[1], 2 * c[1])
+        # for i in 2:n_components
+        #     covariance += Celerite(a[i], b[i], c[i], d[i]) + Exp(a[i], 2 * c[i])
+        # end
     else
         error("Basis function" * basis_function * "not implemented")
     end
