@@ -50,6 +50,15 @@ function Celerite_psd(f, a, b, c, d)
     return num ./ den
 end
 
+
+""" calculate(f, C::Celerite)
+    
+    Calculate the power spectral density at frequency f
+"""
+function calculate(f, C::Celerite)
+    return Celerite_psd.(f, Ref(C.a), Ref(C.b), Ref(C.c), Ref(C.d))
+end 
+
 function Celerite_psd(f, cov::Celerite)
     return Celerite_psd(f, cov.a, cov.b, cov.c, cov.d)
 end
