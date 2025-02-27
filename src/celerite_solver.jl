@@ -11,7 +11,7 @@ U,V are the rank-R matrices, D is the diagonal matrix and ϕ is the matrix of th
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
 
-function init_semi_separable!(
+@inline function init_semi_separable!(
         a::AbstractVector, b::AbstractVector, c::AbstractVector,
         d::AbstractVector, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
         D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix
@@ -32,7 +32,7 @@ function init_semi_separable!(
     τ1 = τ[1]
 
     # initialise first row
-    for j in 1:J
+    @inbounds for j in 1:J
         co = cos(d[j] * τ1)
         si = sin(d[j] * τ1)
 
@@ -94,7 +94,7 @@ function init_semi_separable!(
         dn = suma + σ2[n] - s
         D[n] = dn
         # update V ( which is W in the paper )
-        for j in 1:R
+        @inbounds for j in 1:R
             V[j, n] /= dn
 
         end
@@ -134,7 +134,7 @@ See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....1
     @inbounds for n in 2:N
         s = 0.0
         z_p = z[n - 1]
-        for j in 1:R
+        @inbounds for j in 1:R
             f[j] = (gp[j] + W[j, n - 1] * z_p) * ϕ[j, n - 1]
             s += U[j, n] * f[j]
         end
@@ -148,7 +148,7 @@ See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....1
     @inbounds for n in (N - 1):-1:1
         s = 0.0
         zn = z[n + 1]
-        for j in 1:R
+        @inbounds for j in 1:R
             g[j] = (fp[j] + U[j, n + 1] * zn) * ϕ[j, n]
             s += W[j, n] * g[j]
         end
