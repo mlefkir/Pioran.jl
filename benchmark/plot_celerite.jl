@@ -1,12 +1,12 @@
-using PkgBenchmark, BenchmarkTools, CairoMakie
+using BenchmarkTools, CairoMakie
 using DelimitedFiles
 
-results = readresults("results_celerite.json")
+results = BenchmarkTools.load("/home/mehdy/results_Pioran@main.json")
 suite = results.benchmarkgroup["inference"]
 med = median(suite)
 
-n_samples = [50, 100, 200, 500, 800, 1_000, 2_000, 5_000, 10_000, 20_000, 50_000, 100_000]
-n_components = [10, 20, 25, 30, 40, 50]
+n_samples = 2 .^ (5:15)
+n_components = 2 .^ (1:6)
 
 ArrMediansTime = zeros(length(n_samples), length(n_components))
 ArrMediansMemory = zeros(length(n_samples), length(n_components))
@@ -18,8 +18,8 @@ for (j, J) in enumerate(n_components)
     end
 end
 
-writedlm("median_time.txt", ArrMediansTime)
-writedlm("median_memory.txt", ArrMediansMemory)
+writedlm("median_time_celerite.txt", ArrMediansTime)
+writedlm("median_memory_celerite.txt", ArrMediansMemory)
 
 fig = Figure(resolution = (700, 400), font = "sans", figure_padding = 3)
 ax = Axis(
@@ -70,5 +70,5 @@ fig[2, 1:2] = Legend(
     framevisible = false
 )
 fig
-save("Likelihood_benchmarks_bis.pdf", fig, px_per_unit = 0.5)
-save("Likelihood_benchmarks_bis.png", fig)
+save("Likelihood_benchmarks_celerite.pdf", fig, px_per_unit = 0.5)
+save("Likelihood_benchmarks_celerite.png", fig)

@@ -33,23 +33,23 @@ using Pioran
     f = ScalableGP(μ,𝓡)
 
     # sample the conditioned distribution
-    return y ~ f(t, σ²) # <- this means that our data y is distributed according 
+    return y ~ f(t, σ²) # <- this means that our data y is distributed according
     # to the GP f conditioned with input t and variance σ²
 end
 ```
 
-The order of the parameters in the `@model` block is important, first we define the prior distribution for the parameters, then we rescale the measurement variance and define the power spectral density function and its approximation to form a covariance function. Finally, we build the Gaussian process. 
+The order of the parameters in the `@model` block is important, first we define the prior distribution for the parameters, then we rescale the measurement variance and define the power spectral density function and its approximation to form a covariance function. Finally, we build the Gaussian process.
 
 The last line says that the data `y` is distributed according to the Gaussian process `f` conditioned with input time `t` and measurement variance `σ²`.
 
 ### Prior distributions
 
-In practice, if we have several slopes $\alpha_i$ and frequencies $f_i$, we would like to order them such that $\alpha_i < \alpha_{i+1}$ and $f_i< f_{i+1}$. However, in `Turing.jl` it is not yet possible to sample from distributions with dynamic support, see these issues [[1]](https://github.com/TuringLang/Turing.jl/issues/1558),[[2]](https://github.com/TuringLang/Turing.jl/issues/1708),[[3]](https://github.com/TuringLang/Turing.jl/issues/1270). 
+In practice, if we have several slopes $\alpha_i$ and frequencies $f_i$, we would like to order them such that $\alpha_i < \alpha_{i+1}$ and $f_i< f_{i+1}$. However, in `Turing.jl` it is not yet possible to sample from distributions with dynamic support, see these issues [[1]](https://github.com/TuringLang/Turing.jl/issues/1558),[[2]](https://github.com/TuringLang/Turing.jl/issues/1708),[[3]](https://github.com/TuringLang/Turing.jl/issues/1270).
 
-The solution proposed in these issues is to define a custom multivariate distribution with bijectors to map from the constrained space to the unconstrained space. 
+The solution proposed in these issues is to define a custom multivariate distribution with bijectors to map from the constrained space to the unconstrained space.
 
 Here we provide three distributions:
-[`TwoUniformDependent`](@ref), [`ThreeUniformDependent`](@ref) and [`TwoLogUniformDependent`](@ref). 
+[`TwoUniformDependent`](@ref), [`ThreeUniformDependent`](@ref) and [`TwoLogUniformDependent`](@ref).
 
 In a double-bending power-law model they can be used as follows:
 ```julia
@@ -114,7 +114,7 @@ num_chains = nworkers();
 
     data = readdlm(filename, comments=true)
     t, y, yerr = ...
-    # do something 
+    # do something
 end
 
 @everywhere @model function ...
@@ -159,7 +159,7 @@ h5open("total_chain.h5", "w") do file
 end
 ```
 
-## Example 
+## Example
 
 Here is an example of a script which can be found in the example directory of the `Pioran.jl` package. This script is used to sample from the posterior distribution using multiple chains.
 
@@ -230,7 +230,7 @@ end
     f = ScalableGP(μ, 𝓡)
 
     # sample the conditioned distribution
-    return y ~ f(t, σ²) # <- this means that our data y is distributed according 
+    return y ~ f(t, σ²) # <- this means that our data y is distributed according
     # to the GP f conditioned with input t and variance σ²
 end
 
@@ -240,9 +240,9 @@ end
     nuts = AdvancedHMC.NUTS(tap)
 end
 
-# either 
+# either
 # HMCchains = sample(GP_inference(y, t, yerr), externalsampler(nuts), MCMCDistributed(),1000,num_chains, n_adapts=n_adapts, progress=true)
-# or 
+# or
 HMCchains = pmap(c -> sample(inference_model(y, t, yerr), externalsampler(nuts), 1000; n_adapts=n_adapts,save_state=true, progress=true), 1:num_chains)
 total_chainHMC = chainscat(HMCchains...)# not needed in the previous case
 

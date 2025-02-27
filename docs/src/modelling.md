@@ -6,17 +6,17 @@ We use [`SingleBendingPowerLaw`](@ref) and [`DoubleBendingPowerLaw`](@ref) to mo
 
 ```@example modelling
 using Plots
-using Pioran 
-𝓟1 = SingleBendingPowerLaw(1., .1, 3.4) 
+using Pioran
+𝓟1 = SingleBendingPowerLaw(1., .1, 3.4)
 𝓟2 = SingleBendingPowerLaw(.4, 1e-2, 3.)
 𝓟3 = SingleBendingPowerLaw(.1, 3., 2.4)
 𝓟1d = DoubleBendingPowerLaw(1.2,1e-3,2.4,1.1,4.2)
 𝓟2d = DoubleBendingPowerLaw(0.2,1e-2,1.3,24.3,3.1)
 𝓟3d = DoubleBendingPowerLaw(0.5,1e-3,2.1,91.2,4.9)
 f = 10 .^ range(-4, stop=3, length=1000)
-l = @layout [a b] 
+l = @layout [a b]
 p1 =  plot(f,[𝓟1(f),𝓟2(f),𝓟3(f)],xlabel="Frequency (day^-1)",ylabel="Power Spectral Density",legend=false,framestyle = :box,xscale=:log10,yscale=:log10,ylims=(1e-15,1e1),lw=2)
-p2 =  plot(f,[𝓟1d(f),𝓟2d(f),𝓟3d(f)],xlabel="Frequency (day^-1)",legend=false,framestyle = :box,xscale=:log10,yscale=:log10,ylims=(1e-15,1e1),lw=2) 
+p2 =  plot(f,[𝓟1d(f),𝓟2d(f),𝓟3d(f)],xlabel="Frequency (day^-1)",legend=false,framestyle = :box,xscale=:log10,yscale=:log10,ylims=(1e-15,1e1),lw=2)
 plot(p1,p2,layout=l,size=(700,300),grid=false,left_margin=2Plots.mm,bottom_margin=20Plots.px,title=["Single bending power-law" "Double bending power-law"])
 ```
 
@@ -87,7 +87,7 @@ In order to check the quality of the approximation, we can compute the residuals
 ```@example modelling
 using Distributions
 using Random
-rng = MersenneTwister(1234) 
+rng = MersenneTwister(1234)
 
 min_f_b, max_f_b = 1e-3, 1e3
 function prior_transform(cube)
@@ -99,7 +99,7 @@ function prior_transform(cube)
 end
 
 P = 2000
-unif = rand(rng, 4, P) 
+unif = rand(rng, 4, P)
 priors = mapreduce(permutedims, hcat, [prior_transform(unif[:, i]) for i in 1:P]')
 l = @layout [a b ; c d]
 p1 = histogram(priors[1,:],xlabel="α₁")
@@ -111,7 +111,7 @@ p4 = histogram(priors[4,:],xlabel="variance",bins=bins,xaxis=(:log10,(bins[1],bi
 plot(p1,p2,p3,p4,layout=l,size=(700,300),grid=false,left_margin=2Plots.mm,bottom_margin=20Plots.px,legend=false)
 ```
 
-We can then use the function [`run_diagnostics`](@ref) to assess the quality of the approximation. 
+We can then use the function [`run_diagnostics`](@ref) to assess the quality of the approximation.
 The first argument is an array containing the parameters of the power spectral density, the second argument is the variance of the process. `f_min` and `f_max` are the minimum and maximum frequencies of the time series, this is to show the window of observed frequencies in the plots.
 
 ```@example modelling
@@ -126,7 +126,7 @@ The mean of the residuals and ratios as a function of frequency.
 figs[1]# hide
 ```
 
-The quantiles of the residuals and ratios as a function of frequency. 
+The quantiles of the residuals and ratios as a function of frequency.
 ```@example modelling
 figs[2]# hide
 ```
@@ -158,7 +158,7 @@ variance = 2.2
 The Gaussian process is built using the type [`ScalableGP`](@ref). If the mean of the process $\mu$ is known, it can be given as a first argument. Otherwise, the mean is assumed to be zero.
 
 ```@example modelling
-μ = 1.3 
+μ = 1.3
 f = ScalableGP(μ, 𝓡)
 ```
 At the moment, the GP does not include the measurement variance `σ²` and the time values `t`. This is done in the next step.
@@ -166,7 +166,7 @@ At the moment, the GP does not include the measurement variance `σ²` and the t
 using DelimitedFiles # hide
 A = readdlm("data/simu.txt",comments=true) # hide
 t, y, yerr = A[:,1], A[:,2], A[:,3] # hide
-σ² = yerr .^ 2 
+σ² = yerr .^ 2
 fx = f(t, σ²)
 ```
 The log-likelihood of the Gaussian process given the data `y` can be computed using the function `logpdf` from the `Distributions` package.
