@@ -193,6 +193,9 @@ Check the approximation of the PSD by computing the residuals and the ratios of 
 - `ratios::Array{Float64, 2}` : The ratios (approx_psd/psd)
 """
 function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequencies = 1_000, basis_function = "SHO", n_components = 20)
+    if ndims(samples) == 1
+        samples = reshape(samples, 1, length(samples))
+    end
     P = size(samples, 2)
     f = collect(10 .^ range(log10(f0), log10(fM), n_frequencies))
 
