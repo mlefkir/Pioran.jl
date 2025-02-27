@@ -3,7 +3,7 @@
 [![Documentation](https://github.com/mlefkir/Pioran.jl/actions/workflows/documentation.yml/badge.svg)](https://github.com/mlefkir/Pioran.jl/actions/workflows/documentation.yml) [![Build](https://github.com/mlefkir/Pioran.jl/actions/workflows/testbuild.yml/badge.svg)](https://github.com/mlefkir/Pioran.jl/actions/workflows/testbuild.yml)
 [![codecov](https://codecov.io/gh/mlefkir/Pioran.jl/graph/badge.svg?token=88LNFU2VKD)](https://codecov.io/gh/mlefkir/Pioran.jl)
 
-Pioran is a Julia package to estimate bending power-law power spectrum of time series. This method uses Gaussian process regression with the fast algorithm of [Foreman-Mackey, et al. 2017](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F/abstract). The bending power-law model is approximated using basis functions as shown in the Figure below. 
+Pioran is a Julia package to estimate bending power-law power spectrum of time series. This method uses Gaussian process regression with the fast algorithm of [Foreman-Mackey, et al. 2017](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F/abstract). The bending power-law model is approximated using basis functions as shown in the Figure below.
 
 [![Basis functions of the bending power-law model](./extra/approximation.svg)](#)
 

@@ -4,7 +4,7 @@ Here we only give a brief introduction to Gaussian processes and how we use them
 
 ## Gaussian process regression
 
-A Gaussian process $\boldsymbol{f}$ is formally defined as a collection of random variables, any finite number of which have a joint Gaussian distribution. This process is fully described by its mean function $\mu(t)$ and its covariance function (or kernel) $k(t,t')$. The kernel must be a positive-definite function, i.e. the covariance matrix $K$ with elements $K_{ij} = k(t_i, t_j)$ must be positive-definite. 
+A Gaussian process $\boldsymbol{f}$ is formally defined as a collection of random variables, any finite number of which have a joint Gaussian distribution. This process is fully described by its mean function $\mu(t)$ and its covariance function (or kernel) $k(t,t')$. The kernel must be a positive-definite function, i.e. the covariance matrix $K$ with elements $K_{ij} = k(t_i, t_j)$ must be positive-definite.
 
 #### Likelihood function
 
@@ -27,21 +27,21 @@ The conditional distribution of the Gaussian process given the data  $\boldsymbo
 \end{aligned}
 ```
 
-where $K_*$ is the covariance matrix between the new points $\boldsymbol{t_*}$ and the old points $\boldsymbol{t}$, and $K_{**}$ is the covariance matrix between the new points $\boldsymbol{t_*}$. The cost of computing the conditional distribution scales as $\mathcal{O}(n^3)$. 
+where $K_*$ is the covariance matrix between the new points $\boldsymbol{t_*}$ and the old points $\boldsymbol{t}$, and $K_{**}$ is the covariance matrix between the new points $\boldsymbol{t_*}$. The cost of computing the conditional distribution scales as $\mathcal{O}(n^3)$.
 
 ### Covariance functions and power spectral densities
 
-Here we model time series data, i.e. data indexed by time. We will assume a one-dimensional and stationary Gaussian process. In this case, the covariance function $k(t,t')$ is only a function of the time separation $\tau = t - t'$. The covariance function and the power spectral density are Fourier pairs. 
+Here we model time series data, i.e. data indexed by time. We will assume a one-dimensional and stationary Gaussian process. In this case, the covariance function $k(t,t')$ is only a function of the time separation $\tau = t - t'$. The covariance function and the power spectral density are Fourier pairs.
 
 ```math
 \mathcal{P}(f) = \int_{-\infty}^{+\infty} k(\tau) e^{-2{\rm i}\pi f \tau} {\rm d }\tau \quad  \quad k(\tau) = \int_{-\infty}^{+\infty}  \mathcal{P}(f) e^{2{\rm i}\pi f \tau} {\rm d }f
 ```
 If we could use the power spectral density to compute the covariance function, we could then use the covariance function to compute the likelihood function and infer the parameters of the power spectral density using Gaussian process regression.
-Unfortunately, it is not always easy to compute the covariance function from the power spectral density, for instance the [`DoubleBendingPowerLaw`](@ref) model does not have a known Fourier transform. 
+Unfortunately, it is not always easy to compute the covariance function from the power spectral density, for instance the [`DoubleBendingPowerLaw`](@ref) model does not have a known Fourier transform.
 
 ## Gaussian processes in Pioran
 
-In `Pioran`, we use Gaussian processes to model the time series data and infer the parameters of the power spectral density. We implement the [`ScalableGP`](@ref) type to build a Gaussian process using the [AbstractGPs](https://github.com/JuliaGaussianProcesses/AbstractGPs.jl) interface. 
+In `Pioran`, we use Gaussian processes to model the time series data and infer the parameters of the power spectral density. We implement the [`ScalableGP`](@ref) type to build a Gaussian process using the [AbstractGPs](https://github.com/JuliaGaussianProcesses/AbstractGPs.jl) interface.
 
 As presented above, Gaussian process regression is expensive to compute and it is not possible to describe all possible spectral densities with analytical kernels. Here we propose to use an approximation of the power spectral density by a sum of simple power spectral densities. We choose these simple power spectral densities to be the Fourier transform of known covariance functions which have a quasi-separable structure. This enables the fast and scalable computation of the log-likelihood function using the `celerite` algorithm introduced in [2017AJ....154..220F](@cite).
 Python implementations of the `celerite` algorithm are available in [celerite2](https://celerite2.readthedocs.io/en/latest/) and [tinygp](https://tinygp.readthedocs.io/en/stable/).
