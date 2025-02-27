@@ -58,6 +58,25 @@ function test_approx_psd()
     end
 end
 
+function test_approx_psd_pl()
+    α_set = [1.8, 1.03, 2.1, 0.46, 1.1, 0.21, 0.74, 0.92, 1.12, 1.25]
+    f0, fM, J = 2.0e-3, 3.52e2, 50
+    f = 10 .^ range(log10(f0), stop = log10(fM), length = 1000)
+
+    return @testset "Check various psd shapes" begin
+        for i in range(1, 10)
+            @testset "Check approximated psd for α = $(α_set[i]))" begin
+                α = α_set[i]
+                PS = PowerLaw(α)
+                papprox = Pioran.approximated_psd(f, PS, f0, fM, n_components = J)
+                @test maximum(abs.(PS(f) / PS(f[1]) - papprox / papprox[1])) < 1.0
+                @test (all(isapprox.(PS(f) / PS(f[1]), papprox / papprox[1], atol = 1.0e-2)))
+            end
+        end
+    end
+end
+
+
 function test_approx_psd_DRWCelerite()
     α₁_set = [0.2, 0.03, 0.1, 0.46, 0.1, 0.21, 0.74, 0.1, 0.03, 0.92]
     f₁_set = [1.3e-2, 1.32e-1, 5.53e-2, 3.3, 0.342, 3.2e1, 1.3, 4.0e1, 1.0e-2, 0.5]
@@ -142,5 +161,6 @@ end
     test_approx_psd()
     test_approx_psd_DRWCelerite()
     test_approx_cov()
+    test_approx_psd_pl()
     test_approx_cov_DRWCelerite()
 end
