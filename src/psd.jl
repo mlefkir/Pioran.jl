@@ -5,6 +5,26 @@ abstract type PowerSpectralDensity <: Model end
 abstract type BendingPowerLaw <: PowerSpectralDensity end
 
 @doc raw"""
+     PowerLaw(α)
+
+Power law model for the power spectral density
+
+- `α`: the power law index
+
+```math
+\mathcal{P}(f) =  (f)^{-α}
+```
+
+"""
+struct PowerLaw{T <: Real} <: PowerSpectralDensity
+    α::T
+end
+
+function calculate(f, psd::PowerLaw)
+    return (f)^(-psd.α)
+end
+
+@doc raw"""
      SingleBendingPowerLaw(α₁, f₁, α₂)
 
 Single bending power law model for the power spectral density
