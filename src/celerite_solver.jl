@@ -512,7 +512,7 @@ function sim(rng::AbstractRNG, a, b, c, d, τ::AbstractVector, σ2::AbstractVect
     V = zeros(T, R, N)
     D::Vector = zeros(T, N)::Union{Vector, Matrix{Float64}}
 
-    init_semi_separable!(a::Vector, b::Vector, c::Vector, d::Vector, τ, σ2, V, D::Vector, U, ϕ, S_n)
+    init_semi_separable!(a, b, c, d, τ, σ2, V, D::Vector, U, ϕ, S_n)
 
     y_sim = zeros(N)
     y_sim[1] = sqrt(D[1]) * q[1]
