@@ -49,7 +49,7 @@ To compute the corresponding covariance function, we approximate the power spect
 
 ```@example getting_started
 f0, fM = 1e-3, 1e3
-variance = 12.3  
+variance = 12.3
 𝓡 = approx(𝓟, f0, fM, 20, variance, basis_function="SHO")
 τ = range(0, stop=300, length=1000)
 plot(τ, 𝓡.(τ,0.), label="Covariance function",xlabel="Time lag (days)",ylabel="Autocovariance",legend=true,framestyle = :box)
@@ -58,7 +58,7 @@ plot(τ, 𝓡.(τ,0.), label="Covariance function",xlabel="Time lag (days)",ylab
 We can now build a Gaussian process $f$ which uses the quasi-separable struct of the covariance function to speed up the computations. If the mean of the process $\mu$ is known, it can be given as an argument. Otherwise, the mean is assumed to be zero.
 
 ```@example getting_started
-μ = 1.3 
+μ = 1.3
 f = ScalableGP(μ, 𝓡)
 ```
 
@@ -76,7 +76,7 @@ function loglikelihood(y, t, σ, params)
 
     α₁, f₁, α₂, variance, μ = params
 
-    σ² = σ .^ 2 
+    σ² = σ .^ 2
 
     # Define power spectral density function
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)

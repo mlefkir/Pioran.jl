@@ -17,7 +17,7 @@ def replot_julia_results(t,y,yerr,path):
 
     f_min = 1/(t[-1]-t[0])
     f_max = 1/(2*np.min(np.diff(t)))
-    
+
     if os.path.isfile("{path}psd_ppc_data.txt"):
         A = np.genfromtxt(f"{path}psd_ppc_data.txt").T
         psd_noise_levels = np.genfromtxt(f"{path}psd_noise_levels.txt")
@@ -38,7 +38,7 @@ def replot_julia_results(t,y,yerr,path):
         lags = A[:,0]
         acvf_mean = A[:,2]
         replot_residuals_ppc(t, ppc_residuals_mean, res_quantiles, lags, acvf_mean,path)
-    
+
     if os.path.isfile(f"{path}binned_lsp_data.txt"):
         lsp_data = np.genfromtxt(f"{path}binned_lsp_data.txt")
         lsp_ppc_data = np.genfromtxt(f"{path}lsp_ppc_data.txt").T
@@ -46,7 +46,7 @@ def replot_julia_results(t,y,yerr,path):
 
 def replot_lsp_ppc(lsp_data,lsp_ppc_data,f_min,f_max,path):
     """Replot the Lomb-Scargle periodogram PPC.
-    
+
     Parameters
     ----------
     lsp_data : array
@@ -59,7 +59,7 @@ def replot_lsp_ppc(lsp_data,lsp_ppc_data,f_min,f_max,path):
         The maximum frequency.
     path : str
         The path to save the plot.
-    
+
     """
     binned_f = lsp_data[:,0]
     binned_lsp = lsp_data[:,1]
@@ -86,7 +86,7 @@ def replot_lsp_ppc(lsp_data,lsp_ppc_data,f_min,f_max,path):
         bbox_transform=fig.transFigure,
     )
     fig.savefig(f"{path}replot_lsp_ppc.pdf",bbox_inches="tight")
-    
+
 def replot_psd_ppc(f, psd_quantiles, psd_approx_quantiles, psd_noise_levels, f_min, f_max, path
 ):
     """Replot the PSD PPC plot.
@@ -230,11 +230,11 @@ def replot_ts_ppc(t, y, yerr, t_pred, ts_quantiles, path):
 
     fig.tight_layout()
     fig.savefig(f"{path}replot_ts_ppc.pdf", bbox_inches="tight")
-    
+
 
 def replot_residuals_ppc(t, ppc_residuals_mean, res_quantiles, lags, acvf_mean,path):
     """Replot the residuals and the autocorrelation of the residuals.
-    
+
     Parameters
     ----------
     t : array
@@ -248,7 +248,7 @@ def replot_residuals_ppc(t, ppc_residuals_mean, res_quantiles, lags, acvf_mean,p
     acvf_mean : array
         Mean of the autocorrelation.
     path : str
-    
+
     """
 
     n = len(t)
@@ -270,7 +270,7 @@ def replot_residuals_ppc(t, ppc_residuals_mean, res_quantiles, lags, acvf_mean,p
     ax[0][0].sharey(ax[0][1])
     ax[0][0].scatter(t, ppc_residuals_mean, facecolor="w",s=9, linewidths=.75,label="Residuals",ec=res_sec_color, zorder=10)
     ax[0][0].axhline(0, c="k", ls="-",zorder=10,lw=1)
-    ax[0][0].set_ylabel("Residuals") 
+    ax[0][0].set_ylabel("Residuals")
     ax[0][0].fill_between(t, res_quantiles[:, 1], res_quantiles[:, 3], alpha=0.3,color=res_color)
     ax[0][0].fill_between(t, res_quantiles[:, 0], res_quantiles[:, 4], alpha=0.3,color=res_color)
     ax[0][0].set_xlabel("Time ($d$)")
@@ -301,4 +301,4 @@ def replot_residuals_ppc(t, ppc_residuals_mean, res_quantiles, lags, acvf_mean,p
     fig.align_ylabels()
     fig.tight_layout()
     fig.savefig(f"{path}replot_residuals_ppc.pdf",bbox_inches="tight")
-    
+

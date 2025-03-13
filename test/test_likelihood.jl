@@ -1,4 +1,3 @@
-
 using DelimitedFiles
 using Pioran, Test
 using Distributions
@@ -15,8 +14,8 @@ min_f_b = f0 * 10
 max_f_b = fM / 10
 α₁, f₁, α₂ = 0.82, 0.01, 3.3
 ν = 1.0
-μ = 0.0# mean(y)
-variance = var(y, corrected=true)
+μ = 0.0 # mean(y)
+variance = var(y, corrected = true)
 
 
 function modelling(pars, t, y, yerr)

@@ -2,17 +2,6 @@ using Pioran: SumOfSemiSeparable
 using LinearAlgebra
 using LoopVectorization
 
-# Precompute cos and sin values for efficiency
-@inline function precompute_trig!(cos_vals, sin_vals, d, τ)
-   @inbounds for j in 1:length(d)
-        @inbounds for n in 1:length(τ)
-            dt = d[j] * τ[n]
-            cos_vals[j, n] = cos(dt)
-            sin_vals[j, n] = sin(dt)
-        end
-    end
-end
-
 """
      init_semi_separable(a, b, c, d, τ, σ2)
 
@@ -21,9 +10,12 @@ U,V are the rank-R matrices, D is the diagonal matrix and ϕ is the matrix of th
 
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-@inline function init_semi_separable!(a::AbstractVector, b::AbstractVector, c::AbstractVector,
-    d::AbstractVector, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
-    D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix)
+
+@inline function init_semi_separable!(
+        a::AbstractVector, b::AbstractVector, c::AbstractVector,
+        d::AbstractVector, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
+        D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix
+    )
 
     J::Int64 = length(a)
     R::Int64 = 2 * J
@@ -32,63 +24,60 @@ See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....1
     # number of data points
     N::Int64 = length(τ)
 
-    T = eltype(a)
-
     # initialise matrices and vectors
     # it is faster to access the columns
     D[1] = suma + σ2[1]
     dn = D[1]
     buff = 1.0 / dn
+    τ1 = τ[1]
 
-    cos_vals = Matrix{T}(undef, J, N)
-    sin_vals = Matrix{T}(undef, J, N)
-    precompute_trig!(cos_vals, sin_vals, d, τ)
-
-    @simd for j in 1:J
-        co = cos_vals[j, 1]
-        si = sin_vals[j, 1]
+    # initialise first row
+    @inbounds for j in 1:J
+        co = cos(d[j] * τ1)
+        si = sin(d[j] * τ1)
 
         V[2j, 1] = si * buff
-        V[2j-1, 1] = co * buff
+        V[2j - 1, 1] = co * buff
 
         U[2j, 1] = a[j] * si - b[j] * co
-        U[2j-1, 1] = a[j] * co + b[j] * si
+        U[2j - 1, 1] = a[j] * co + b[j] * si
     end
 
-    @inbounds for n in 2:N
+    return @inbounds for n in 2:N
 
         s = 0.0
-        dτ = τ[n] - τ[n-1]
+        τn = τ[n]
+        dτ = τn - τ[n - 1]
 
         # initialise the U,V and ϕ matrices
-        @simd for j in 1:J
-            co = cos_vals[j, n]
-            si = sin_vals[j, n]
+        @inbounds for j in 1:J
+            co = cos(d[j] * τn)
+            si = sin(d[j] * τn)
             ec = exp(-c[j] * dτ)
 
-            ϕ[2j, n-1] = ec
-            ϕ[2j-1, n-1] = ec
+            ϕ[2j, n - 1] = ec
+            ϕ[2j - 1, n - 1] = ec
 
             U[2j, n] = a[j] * si - b[j] * co
-            U[2j-1, n] = a[j] * co + b[j] * si
+            U[2j - 1, n] = a[j] * co + b[j] * si
 
             V[2j, n] = si
-            V[2j-1, n] = co
+            V[2j - 1, n] = co
         end
 
         # use the property that S_n is symmetric to fill only the lower triangle
         # compute the triple product U*S*U and the sum for D at the same time
         # no Float64 order is needed for the computation
-        @simd for j in 1:R
+        @inbounds for j in 1:R
             uj = U[j, n]
-            ϕnj = ϕ[j, n-1]
-            vn = V[j, n-1]
-            dn = D[n-1] * vn
+            ϕnj = ϕ[j, n - 1]
+            vn = V[j, n - 1]
+            dn = D[n - 1] * vn
             vnj = V[j, n]
 
-            @inbounds for k in 1:j-1
+            @inbounds for k in 1:(j - 1)
                 uk = U[k, n]
-                r = ϕnj * ϕ[k, n-1] * (S_n[j, k] + dn * V[k, n-1])
+                r = ϕnj * ϕ[k, n - 1] * (S_n[j, k] + dn * V[k, n - 1])
                 S_n[j, k] = r
                 v = uj * r
                 V[k, n] -= v
@@ -105,26 +94,30 @@ See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....1
         dn = suma + σ2[n] - s
         D[n] = dn
         # update V ( which is W in the paper )
-        @simd for j in 1:R
+        @inbounds for j in 1:R
             V[j, n] /= dn
 
         end
     end
 end
 
-init_semi_separable!(a::Float64, b::Float64, c::Float64,
+init_semi_separable!(
+    a::Float64, b::Float64, c::Float64,
     d::Float64, τ::AbstractVector, σ2::AbstractVector, V::AbstractMatrix,
-    D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix) = init_semi_separable!([a], [b], [c], [d], τ, σ2, V, D, U, ϕ, S_n)
+    D::AbstractVector, U::AbstractMatrix, ϕ::Matrix, S_n::AbstractMatrix
+) = init_semi_separable!([a], [b], [c], [d], τ, σ2, V, D, U, ϕ, S_n)
 
-""" 
+"""
     solve_prec!(z, y, U, W, D, ϕ)
 
 Forward and backward substitution of the celerite algorithm.
 
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-function solve_prec!(z::AbstractVector, y::AbstractVector,
-    U::AbstractMatrix, W::AbstractMatrix, D::AbstractVector, ϕ::AbstractMatrix)
+@inline function solve_prec!(
+        z::AbstractVector, y::AbstractVector,
+        U::AbstractMatrix, W::AbstractMatrix, D::AbstractVector, ϕ::AbstractMatrix
+    )
     T = eltype(U)
     N = length(y)
     R = size(U, 1)
@@ -140,9 +133,9 @@ function solve_prec!(z::AbstractVector, y::AbstractVector,
     # forward substitution
     @inbounds for n in 2:N
         s = 0.0
-        z_p = z[n-1]
-        for j in 1:R
-            f[j] = (gp[j] + W[j, n-1] * z_p) * ϕ[j, n-1]
+        z_p = z[n - 1]
+        @inbounds for j in 1:R
+            f[j] = (gp[j] + W[j, n - 1] * z_p) * ϕ[j, n - 1]
             s += U[j, n] * f[j]
         end
         gp = f
@@ -152,11 +145,11 @@ function solve_prec!(z::AbstractVector, y::AbstractVector,
 
     # backward substitution
     z[N] /= D[N]
-    @inbounds for n = N-1:-1:1
+    @inbounds for n in (N - 1):-1:1
         s = 0.0
-        zn = z[n+1]
-        for j in 1:R
-            g[j] = (fp[j] + U[j, n+1] * zn) * ϕ[j, n]
+        zn = z[n + 1]
+        @inbounds for j in 1:R
+            g[j] = (fp[j] + U[j, n + 1] * zn) * ϕ[j, n]
             s += W[j, n] * g[j]
         end
         fp = g
@@ -164,6 +157,96 @@ function solve_prec!(z::AbstractVector, y::AbstractVector,
     end
 
     return logdetD
+end
+
+"""
+    get_values!(a, b, c, d, zp, U, V, P, D, t)
+
+Compute the values of the matrices and vectors needed for the celerite algorithm.
+This is a vectorised version of the `init_semi_separable!` and `solve_prec!` functions.
+This function appears to be faster than the two previous functions when J > 16 but it also uses more memory.
+
+More study of this implementation is needed.
+
+"""
+@inline function get_values!(
+        a::AbstractVector, b::AbstractVector, c::AbstractVector, d::AbstractVector
+        , zp::AbstractVector, U::AbstractMatrix, V::AbstractMatrix, P::AbstractMatrix, D::AbstractVector, t::AbstractVector
+    )
+    R, N = size(U)
+    T = eltype(U)
+    S_n = zeros(T, R, R)
+    f = zeros(T, R)
+    return @views  begin
+        odd = 1:2:R
+        even = 2:2:R
+        dτ = diff(t)
+        td = @turbo @. t' * d
+        co = @turbo @. cos(td)
+        si = @turbo @. sin(td)
+        ec = @turbo @. exp(-dτ' * c)
+        U[odd, :] = @turbo @. a * co + b * si
+        U[even, :] = @turbo @. a * si - b * co
+        V[odd, :] = co
+        V[even, :] = si
+        P[even, :] = ec
+        P[odd, :] = ec
+        V[:, 1] /= D[1]
+        @inbounds for n in 2:N
+            un = U[:, n]
+            vn1 = V[:, n - 1]
+            pn1 = P[:, n - 1]
+            @turbo @. S_n += D[n - 1] * vn1 * vn1'
+            @turbo @. S_n *= pn1 * pn1'
+            buff = S_n * un
+            D[n] -= (un)' * buff
+            V[:, n] -= buff
+            V[:, n] /= D[n]
+            @turbo @. f += (vn1) * zp[n - 1]
+            @turbo @. f *= pn1
+            zp[n] -= (un)' * f
+        end
+        f = zeros(T, R)
+        zp[N] /= D[N]
+        @inbounds for n in (N - 1):-1:1
+            @turbo  @. f += (U[:, n + 1]) * zp[n + 1]
+            @turbo @. f *= (P[:, n])
+            zp[n] /= D[n]
+            zp[n] -= (V[:, n])' * f
+        end
+    end
+end
+
+"""
+    compute_nll(t, y, σ², a, b, c, d)
+
+    Compute the likelihood using the vectorised implementation in `get_values!`.
+
+    Still experimental.
+"""
+@inline function compute_nll(t, y, σ², a, b, c, d)
+    N = length(y)
+    J = length(a)
+    T = eltype(a)
+    R = 2 * J
+    U = Matrix{T}(undef, R, N)
+    V = Matrix{T}(undef, R, N)
+    P = Matrix{T}(undef, R, N - 1)
+    suma = sum(a)
+
+    D = @turbo @. σ² + suma
+    zp = y[:]
+
+    get_values!(
+        a, b, c, d, zp,
+        U,
+        V,
+        P,
+        D,
+        t
+    )
+    𝓛 = @turbo -sum(log.(D)) / 2 - N * log(2π) / 2 - y'zp / 2
+    return 𝓛
 end
 
 """
@@ -178,21 +261,21 @@ Compute the log-likelihood of a semi-separable covariance function using the cel
 - `σ2::Vector`: the measurement variances
 
 """
-function log_likelihood(cov::SumOfSemiSeparable, τ, y, σ2)
-    a, b, c, d = cov.a, cov.b, cov.c, cov.d
-    return logl(a, b, c, d, τ, y, σ2)
+@inline function log_likelihood(cov::SumOfCelerite, τ, y, σ2)
+    return logl(cov.a, cov.b, cov.c, cov.d, τ, y, σ2)
+    #return compute_nll(τ, y, σ2, cov.cov.a, cov.cov.b, cov.cov.c, cov.cov.d)
 end
 
-function log_likelihood(cov::CARMA, τ, y, σ2)
+@inline function log_likelihood(cov::CARMA, τ, y, σ2)
     a, b, c, d = celerite_coefs(cov)
     return real(logl(a, b, c, d, τ, y, σ2))
 end
 
-function log_likelihood(cov::SemiSeparable, τ, y, σ2)
+@inline function log_likelihood(cov::SemiSeparable, τ, y, σ2)
     a, b, c, d = celerite_coefs(cov)
     return logl(a, b, c, d, τ, y, σ2)
 end
- 
+
 """
     logl(a, b, c, d, τ, y, σ2)
 
@@ -219,7 +302,7 @@ function logl(a, b, c, d, τ, y, σ2)
     # number of rows in U and V, twice the number of terms
     R::Int64 = 2 * J
 
-    S_n = zeros(T, R, R)    
+    S_n = zeros(T, R, R)
     ϕ = Matrix{T}(undef, R, N - 1)
     U = Matrix{T}(undef, R, N)
     V = Matrix{T}(undef, R, N)
@@ -260,7 +343,7 @@ function predict(cov::SemiSeparable, τ::AbstractVector, t::AbstractVector, y::A
     return pred(a, b, c, d, τ, t, y, σ²)
 end
 
-function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector)
+function pred(a, b, c, d, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector)
 
     M = length(τ)
     N = length(t)
@@ -278,7 +361,7 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
     V = Matrix{T}(undef, R, N)
     D = Vector{T}(undef, N)
     init_semi_separable!(a, b, c, d, t, σ², V, D, U, ϕ, S_n)
-    # get z 
+    # get z
     z = Vector{T}(undef, N)
 
     _ = solve_prec!(z, y, U, V, D, ϕ)
@@ -286,7 +369,7 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
     Q = zeros(T, R) # same as in the paper
     μₘ = zeros(T, M)
     n₀L = searchsortedfirst.(Ref(t), τ) .- 1
-    S = zeros(T, R) # ia  Q' * X⁻ 
+    S = zeros(T, R) # ia  Q' * X⁻
 
     start = 1
     ### forward pass ###
@@ -294,10 +377,10 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
         τm = τ[m]
         # compute Q, S
         #-----------------#
-        for n in start:n₀-1
+        for n in start:(n₀ - 1)
             start += 1
             tn = t[n]
-            tn₊₁ = t[n+1]
+            tn₊₁ = t[n + 1]
             zn = z[n]
 
             Q[1:2:end] = (Q[1:2:end] .+ zn .* cos.(d .* tn)) .* exp.(-c .* (tn₊₁ .- tn))
@@ -310,7 +393,7 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
             if n₀ == N
                 tn₊₁ = t[n₀]
             else
-                tn₊₁ = t[n₀+1]
+                tn₊₁ = t[n₀ + 1]
             end
 
             S[2:2:end] = (Q[2:2:end] .+ zn .* sin.(d .* tn)) .* exp.(-c .* (τm .- tn)) .* (a .* sin.(d .* τm) .- b .* cos.(d .* τm))
@@ -335,10 +418,10 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
         if n₀ != N # if n₀ == N, then we already have the value for μₘ[m]
             τm = τ[m]
             stop_cur = stop
-            for n in stop_cur:-1:n₀+2
+            for n in stop_cur:-1:(n₀ + 2)
                 stop -= 1
                 tn = t[n]
-                tn₋₁ = t[n-1]
+                tn₋₁ = t[n - 1]
                 zn = z[n]
 
                 Q[1:2:end] = (Q[1:2:end] .+ zn .* (a .* cos.(d .* tn) .+ b .* sin.(d .* tn))) .* exp.(-c .* (tn - tn₋₁))
@@ -353,7 +436,7 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
             if n == 1
                 tn₋₁ = t[1]
             else
-                tn₋₁ = t[n-1]
+                tn₋₁ = t[n - 1]
             end
 
             S[1:2:end] = (Q[1:2:end] .+ zn .* (a .* cos.(d .* tn) .+ b .* sin.(d .* tn))) .* exp.(-c .* (tn .- τm)) .* cos.(d .* τm)
@@ -365,7 +448,7 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
                 k = 2
             end
 
-            if (stop_cur == n₀ + 1) && (n₀L[k] != n₀L[k-1]) # if n₀L[k] == n₀L[k-1], then we do not need to update Q yet
+            if (stop_cur == n₀ + 1) && (n₀L[k] != n₀L[k - 1]) # if n₀L[k] == n₀L[k-1], then we do not need to update Q yet
                 stop -= 1
 
                 Q[1:2:end] = (Q[1:2:end] .+ zn .* (a .* cos.(d .* tn) .+ b .* sin.(d .* tn))) .* exp.(-c .* (tn - tn₋₁))
@@ -382,7 +465,7 @@ function pred(a,b,c,d, τ::AbstractVector, t::AbstractVector, y::AbstractVector,
 
 end
 
-""" 
+"""
     simulate(rng, cov, τ, σ2)
     simulate(cov, τ, σ2)
 
@@ -412,7 +495,7 @@ end
 simulate(cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector) = simulate(Random.GLOBAL_RNG, cov::SumOfSemiSeparable, τ::AbstractVector, σ2::AbstractVector)
 
 
-function sim(rng::AbstractRNG, a,b,c,d, τ::AbstractVector, σ2::AbstractVector)
+function sim(rng::AbstractRNG, a, b, c, d, τ::AbstractVector, σ2::AbstractVector)
     N::Int64 = length(τ)
 
     q = randn(rng, N)
@@ -427,9 +510,9 @@ function sim(rng::AbstractRNG, a,b,c,d, τ::AbstractVector, σ2::AbstractVector)
     ϕ = zeros(T, R, N - 1)
     U = zeros(T, R, N)
     V = zeros(T, R, N)
-    D::Vector = zeros(T, N)::Union{Vector,Matrix{Float64}}
+    D::Vector = zeros(T, N)::Union{Vector, Matrix{Float64}}
 
-    init_semi_separable!(a::Vector, b::Vector, c::Vector, d::Vector, τ, σ2, V, D::Vector, U, ϕ, S_n)
+    init_semi_separable!(a, b, c, d, τ, σ2, V, D::Vector, U, ϕ, S_n)
 
     y_sim = zeros(N)
     y_sim[1] = sqrt(D[1]) * q[1]
@@ -438,7 +521,7 @@ function sim(rng::AbstractRNG, a,b,c,d, τ::AbstractVector, σ2::AbstractVector)
 
     for n in 2:N
         for j in 1:R
-            f[j] = ϕ[j, n-1] * (g[j] + V[j, n-1] * sqrt(D[n-1]) * q[n-1])
+            f[j] = ϕ[j, n - 1] * (g[j] + V[j, n - 1] * sqrt(D[n - 1]) * q[n - 1])
             y_sim[n] += U[j, n] * f[j]
         end
         g = f

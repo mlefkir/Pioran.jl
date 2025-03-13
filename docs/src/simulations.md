@@ -84,6 +84,6 @@ We can plot the realisations, the observations and the posterior distribution.
 plot(t_obs, y_obs,yerr=yerr, label="Observations", seriestype=:scatter, xlabel="Time [days]", framestyle = :box,ylabel="Value",color=:black,lw=2)
 plot!(t, samples_cond, label=nothing)
 ```
- 
+
 !!! info "Note"
     Sampling from the conditioned Gaussian process is very inefficient as the posterior distribution is not semi-separable.
