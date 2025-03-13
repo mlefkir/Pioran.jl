@@ -288,37 +288,45 @@ using Pioran
 ```
 
 """
-function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64 = 20, var::Real = 1.0; basis_function::String = "SHO")
+function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64 = 20, var::Real = 1.0; sample_var = nothing, f_min = nothing, f_max = nothing, basis_function::String = "SHO")
 
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function = basis_function)
 
     psd_normalised = get_normalised_psd(psd_model, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
 
+    if !isnothing(sample_var)
+        var = sample_var
+        if basis_function == "SHO"
+            variance = integral(amplitudes, spectral_points, f_min, f_max)
+        elseif basis_function == "DRWCelerite"
+            variance = integral2(amplitudes, spectral_points, f_min, f_max) * 2
+        end
+    else
+        if basis_function == "SHO"
+            variance = sum(amplitudes .* spectral_points) #* π / √2 removed as it is also in the expression of a
+        elseif basis_function == "DRWCelerite"
+            variance = sum(amplitudes .* spectral_points) * 2π / 3
+        end
+    end
+
     if basis_function == "SHO"
 
-        for i in 1:n_components
-            amplitudes[i] *= spectral_points[i]
-        end
-        variance = sum(amplitudes)
-
-        a = var .* amplitudes ./ variance
+        a = amplitudes .* spectral_points * var / variance #  * π / √2 removed as it is also in the expression of a
         c = √2 * π .* spectral_points
 
         covariance = SumOfCelerite(a, a, c, c)
+
     elseif basis_function == "DRWCelerite"
 
-        ω = 2π * spectral_points
-        variance = sum(ω .* amplitudes) / 3
-
-        a = amplitudes .* ω / 6 * var / variance
+        a = amplitudes .* spectral_points * π / 3 * var / variance
         b = √3 * a
-        c = ω / 2
+        c = π * spectral_points
         d = √3 * c
 
         aa = [a; a]
         bb = [b; zeros(n_components)]
-        cc = [c; ω]
+        cc = [c; 2 * c]
         dd = [d; zeros(n_components)]
         covariance = SumOfCelerite(aa, bb, cc, dd)
         # covariance = Celerite(a[1], b[1], c[1], d[1]) + Exp(a[1], 2 * c[1])
@@ -330,4 +338,30 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
     end
 
     return covariance
+end
+
+function integral(a, c, ap, cp)
+    return sum(
+        (1 / (4sqrt(2))) * a .* c .* (
+            2 * atan.(1 .- (sqrt(2) * ap) ./ c) .-
+                2atan.(1 .+ (sqrt(2) * ap) ./ c) .- 2atan.(1 .- (sqrt(2) .* cp) ./ c) .+
+                2atan.(1 .+ (sqrt(2) * cp) ./ c) .+ log.(ap^2 .- sqrt(2) .* ap .* c .+ c .^ 2) .-
+                log.(ap^2 .+ sqrt(2) * ap * c .+ c .^ 2) .- log.(c .^ 2 .- sqrt(2) .* c .* cp .+ cp^2) .+
+                log.(c .^ 2 .+ sqrt(2) .* c * cp .+ cp^2)
+        )
+    )
+end
+
+function integral2(a, c, ap, cp)
+    return sum(
+        a .* c .* (
+            2atan.(sqrt(3) .- 2ap ./ c) .-
+                2atan.(sqrt(3) .+ 2ap ./ c) .- 4atan.(ap ./ c) .+ 4atan.(cp ./ c) .-
+                2atan.(sqrt(3) .- 2cp ./ c) .+ 2atan.(sqrt(3) .+ 2cp ./ c) .+
+                sqrt(3) * log.(ap^2 .- sqrt(3) * ap * c .+ c .^ 2) .-
+                sqrt(3) * log.(ap^2 .+ sqrt(3) * ap * c .+ c .^ 2) .-
+                sqrt(3) * log.(c .^ 2 .- sqrt(3) * c * cp .+ cp^2) .+
+                sqrt(3) * log.(c .^ 2 .+ sqrt(3) * c * cp .+ cp^2)
+        ) ./ 12
+    )
 end
