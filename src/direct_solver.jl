@@ -1,4 +1,4 @@
-""" 
+"""
     log_likelihood_direct(cov::KernelFunctions.SimpleKernel, t::Vector, y::Vector, σ²::Vector)
 
     Compute the log-likelihood of the data Y given the GP f with the direct solver.
@@ -20,7 +20,7 @@ function log_likelihood_direct(cov::KernelFunctions.SimpleKernel, t::Vector, y::
 
 end
 
-""" 
+"""
     predict_direct(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::AbstractVector, σ²::AbstractVector)
 
     Compute the posterior covariance of the GP at the points τ given the times t and the noise variance σ².
@@ -58,7 +58,7 @@ function predict_cov(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::A
 
     # Cholesky decomposition of the covariance matrix
     L = cholesky(K0).U'
-    
+
     # solve the linear system
     w = L \ Kτ0'
 
@@ -67,12 +67,12 @@ function predict_cov(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::A
     return K_p
 end
 
-""" 
+"""
     predict_direct(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector, with_covariance::Bool=false)
 
     Compute the posterior mean of the GP at the points τ given the data (t, y) and the noise variance σ².
 """
-function predict_direct(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector, with_covariance::Bool=false)
+function predict_direct(cov::KernelFunctions.SimpleKernel, τ::AbstractVector, t::AbstractVector, y::AbstractVector, σ²::AbstractVector, with_covariance::Bool = false)
 
     N = length(t)
     M = length(τ)

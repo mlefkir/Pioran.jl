@@ -4,7 +4,7 @@ run with:
 ```bash
 julia simple.jl data.txt
 ```
-where `data.txt` is a file containing the time series data. The file should have three columns: time, flux, flux error. 
+where `data.txt` is a file containing the time series data. The file should have three columns: time, flux, flux error.
 The script will create a directory `inference` containing the results of the inference.
 
 If you have MPI installed, you may want to run the script in parallel, using the following command:
@@ -37,7 +37,7 @@ dir = "inference/" * fname
 plot_path = dir * "/plots/"
 
 # Load the data and extract a subset for the analysis
-A = readdlm(filename, comments=true, comment_char='#')
+A = readdlm(filename, comments = true, comment_char = '#')
 t_all, y_all, yerr_all = A[:, 1], A[:, 2], A[:, 3]
 t, y, yerr, x̄, va = extract_subset(rng, fname, t_all, y_all, yerr_all);
 
@@ -72,7 +72,7 @@ function loglikelihood(y, t, σ, params)
     𝓟 = model(α₁, f₁, α₂)
 
     # Approximation of the PSD to form a covariance function
-    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function=basis_function)
+    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function = basis_function)
 
     # Build the GP
     f = ScalableGP(μ, 𝓡)
@@ -90,26 +90,26 @@ function prior_transform(cube)
     variance = quantile(LogNormal(μₙ, σₙ), cube[4])
     ν = quantile(Gamma(2, 0.5), cube[5])
     μ = quantile(Normal(x̄, 5 * sqrt(va)), cube[6])
-    c = quantile(LogUniform(1e-6, minimum(y) * 0.99), cube[7])
+    c = quantile(LogUniform(1.0e-6, minimum(y) * 0.99), cube[7])
     return [α₁, f₁, α₂, variance, ν, μ, c]
 end
 paramnames = ["α₁", "f₁", "α₂", "variance", "ν", "μ", "c"]
 
 if MPI.Comm_rank(comm) == 0 && prior_checks
     unif = rand(rng, 7, 3000) # uniform samples from the unit hypercube
-    priors = mapreduce(permutedims, vcat, [prior_transform(unif[:, i]) for i in 1:3000]')# transform the uniform samples to the prior
-    run_diagnostics(priors[1:3, :], priors[4, :], f0, fM, model, f_min, f_max, path=plot_path, basis_function=basis_function, n_components=n_components)
+    priors = mapreduce(permutedims, vcat, [prior_transform(unif[:, i]) for i in 1:3000]') # transform the uniform samples to the prior
+    run_diagnostics(priors[1:3, :], priors[4, :], f0, fM, model, f_min, f_max, path = plot_path, basis_function = basis_function, n_components = n_components)
 end
 
 println("Hello world, I am $(MPI.Comm_rank(comm)) of $(MPI.Comm_size(comm))")
 
 println("Running sampler...")
-sampler = ultranest.ReactiveNestedSampler(paramnames, logl, resume=true, transform=prior_transform, log_dir=dir, vectorized=false)
+sampler = ultranest.ReactiveNestedSampler(paramnames, logl, resume = true, transform = prior_transform, log_dir = dir, vectorized = false)
 results = sampler.run()
 sampler.print_results()
 sampler.plot()
 
 if MPI.Comm_rank(comm) == 0 && posterior_checks
-    samples = readdlm(dir * "/chains/equal_weighted_post.txt", skipstart=1)
-    run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, true; path=plot_path, basis_function=basis_function, n_components=n_components)
+    samples = readdlm(dir * "/chains/equal_weighted_post.txt", skipstart = 1)
+    run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, true; path = plot_path, basis_function = basis_function, n_components = n_components)
 end

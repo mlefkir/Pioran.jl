@@ -18,19 +18,23 @@ function test_scalableGP_Exp_init()
         @test fm.kernel isa Pioran.SemiSeparable
 
     end
-    @testset "Scalable GP mean value" begin
+    return @testset "Scalable GP mean value" begin
         @test f.f.mean.c == 0.0
         @test fm.f.mean.c == μ
     end
 end
 
 function test_scalableGP_carma_init()
-    rα = [-0.042163209825323775 + 1.1115603157767922im,
+    rα = [
+        -0.042163209825323775 + 1.1115603157767922im,
         -0.042163209825323775 - 1.1115603157767922im,
-        -0.7599101571312047 + 0.0im]
-    β = [3.9413022090550216,
+        -0.7599101571312047 + 0.0im,
+    ]
+    β = [
+        3.9413022090550216,
         11.38193903188344,
-        1]
+        1,
+    ]
     𝓒 = CARMA(3, 2, rα, β, 1.3)
     μ = 1.2
 
@@ -43,14 +47,14 @@ function test_scalableGP_carma_init()
         @test fm.kernel isa Pioran.CARMA
 
     end
-    @testset "Scalable GP mean value" begin
+    return @testset "Scalable GP mean value" begin
         @test f.f.mean.c == 0.0
         @test fm.f.mean.c == μ
     end
 end
 
 function test_scalableGP_carma_likelihood()
-    function get_quad(rng, p, q, a_min=-4, a_max=4, b_min=-4, b_max=4)
+    function get_quad(rng, p, q, a_min = -4, a_max = 4, b_min = -4, b_max = 4)
         log_a = rand(rng, Uniform(a_min, a_max), p)
         log_b = rand(rng, Uniform(b_min, b_max), q)
         return exp.(log_a), exp.(log_b)
@@ -73,6 +77,7 @@ function test_scalableGP_carma_likelihood()
         @test isfinite(logpdf(f(t, yerr .^ 2), y))
         @test logpdf(f(t, yerr .^ 2), y) ≈ -Pioran.log_likelihood_direct(𝓒, t, y .- μ_set[k], yerr .^ 2)
     end
+    return
 end
 
 
@@ -80,7 +85,7 @@ function test_scalableGP_init()
     α₁, f₁, α₂ = 0.2, 0.02, 3.1
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
     va = 2.31
-    𝓡 = approx(𝓟, 1e-4, 1e1, 30, va, basis_function="SHO")
+    𝓡 = approx(𝓟, 1.0e-4, 1.0e1, 30, va, basis_function = "SHO")
     μ = 1.2
 
     f = ScalableGP(𝓡) # zero-mean GP
@@ -92,7 +97,7 @@ function test_scalableGP_init()
         @test fm.kernel isa Pioran.SumOfSemiSeparable
 
     end
-    @testset "Scalable GP mean value" begin
+    return @testset "Scalable GP mean value" begin
         @test f.f.mean.c == 0.0
         @test fm.f.mean.c == μ
     end
@@ -104,7 +109,7 @@ function test_scalableGP_likelihood()
     yerr = [0.1, 0.2, 0.1, 0.1, 0.2, 0.1]
 
     α₁_set = [0.2, 0.03, 0.1, 0.46, 0.1, 0.21, 0.74, 0.1, 0.03, 0.92]
-    f₁_set = [1.3e-2, 1.32e-1, 5.53e-2, 3.3, 0.342, 3.20e1, 1.3, 4e1, 1e-2, 0.5]
+    f₁_set = [1.3e-2, 1.32e-1, 5.53e-2, 3.3, 0.342, 3.2e1, 1.3, 4.0e1, 1.0e-2, 0.5]
     α₂_set = [3.2, 3.1, 2.3, 2.57, 3.6, 2.3, 2.1, 2.79, 3.3, 3.8]
     variances = [1.32, 35.3, 242.2, 46.6, 0.3, 0.244, 9.64, 0.75, 0.193, 0.21]
     μ_set = [1.2, 0.3, 0.1, 0.46, 0.1, 0.21, 0.74, 0.1, 0.03, 0.92]
@@ -114,12 +119,13 @@ function test_scalableGP_likelihood()
             va, μ = variances[i], μ_set[i]
 
             𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
-            𝓡 = approx(𝓟, 1e-4, 1e1, 30, va, basis_function="SHO")
+            𝓡 = approx(𝓟, 1.0e-4, 1.0e1, 30, va, basis_function = "SHO")
             f = ScalableGP(μ, 𝓡)
             @test isfinite(logpdf(f(t, yerr .^ 2), y))
             @test logpdf(f(t, yerr .^ 2), y) ≈ -Pioran.log_likelihood_direct(f.kernel, t, y .- μ, yerr .^ 2)
         end
     end
+    return
 end
 
 
@@ -131,7 +137,7 @@ function test_scalableGP_posterior()
     α₁, f₁, α₂ = 0.2, 0.02, 3.1
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
     va = 2.31
-    𝓡 = approx(𝓟, 1e-4, 1e1, 30, va, basis_function="SHO")
+    𝓡 = approx(𝓟, 1.0e-4, 1.0e1, 30, va, basis_function = "SHO")
     μ = 1.2
 
     f = ScalableGP(μ, 𝓡)
@@ -156,7 +162,7 @@ function test_scalableGP_posterior()
         @test isposdef(cx)
         @test cx ≈ Pioran.predict_cov(fp.f.f.kernel, tx, fp.f.x, yerr .^ 2)
     end
-    @testset "Scalable GP check std" begin
+    return @testset "Scalable GP check std" begin
         s = std(fp)
         sx = std(fp, tx)
         @test isfinite(s)
@@ -177,7 +183,7 @@ function test_scalableGP_posterior_sample()
     α₁, f₁, α₂ = 0.2, 0.02, 3.1
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
     va = 2.31
-    𝓡 = approx(𝓟, 1e-4, 1e1, 30, va, basis_function="SHO")
+    𝓡 = approx(𝓟, 1.0e-4, 1.0e1, 30, va, basis_function = "SHO")
     μ = 1.2
 
     f = ScalableGP(μ, 𝓡)
@@ -188,7 +194,7 @@ function test_scalableGP_posterior_sample()
     s10 = rand(fp, 10)
     sx = rand(fp, tx)
     sx10 = rand(fp, tx, 10)
-    @testset "Rand posterior GP" begin
+    return @testset "Rand posterior GP" begin
         @test isfinite(s)
         @test isfinite(s10)
         @test size(s10) == (length(t), 10)
@@ -207,7 +213,7 @@ function test_scalableGP_sample()
     α₁, f₁, α₂ = 0.2, 0.02, 3.1
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
     va = 2.31
-    𝓡 = approx(𝓟, 1e-4, 1e1, 30, va, basis_function="SHO")
+    𝓡 = approx(𝓟, 1.0e-4, 1.0e1, 30, va, basis_function = "SHO")
     μ = 1.2
 
     f = ScalableGP(μ, 𝓡)
@@ -215,7 +221,7 @@ function test_scalableGP_sample()
 
     s = rand(fx)
     sx = rand(fx, tx)
-    @testset "Rand posterior GP" begin
+    return @testset "Rand posterior GP" begin
         @test isfinite(s)
         @test isfinite(sx)
     end

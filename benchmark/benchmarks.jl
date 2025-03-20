@@ -1,4 +1,3 @@
-
 using BenchmarkTools
 using DelimitedFiles
 using Pioran
@@ -16,11 +15,11 @@ fM = 1 / minimum(diff(t)) / 2 * 20;
 min_f_b = f0 * 10
 max_f_b = fM / 10
 α₁, f₁, α₂ = 0.82, 0.01, 3.3
-variance = var(y, corrected=true)
+variance = var(y, corrected = true)
 
 ν = 1.0
 σ² = ν .* yerr .^ 2
-μ = 0.0# mean(y)
+μ = 0.0 # mean(y)
 
 𝓟 = SimpleBendingPowerLaw(α₁, f₁, α₂)
 

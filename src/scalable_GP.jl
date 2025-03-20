@@ -1,4 +1,3 @@
-
 """
 A scalable Gaussian process has a covariance function formed of semi-separable kernels
 
@@ -15,7 +14,7 @@ f = ScalableGP(μ, 𝓡) # with mean μ
 ```
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-struct ScalableGP{Typef<:GP{<:AbstractGPs.ConstMean},Tk<:SemiSeparable} <: AbstractGPs.AbstractGP
+struct ScalableGP{Typef <: GP{<:AbstractGPs.MeanFunction}, Tk <: SemiSeparable} <: AbstractGPs.AbstractGP
     f::Typef
     kernel::Tk
 end
@@ -25,10 +24,11 @@ end
 ScalableGP(f::GP) = ScalableGP(f, f.kernel)
 ScalableGP(kernel::SemiSeparable) = ScalableGP(GP(0.0, kernel), kernel)
 ScalableGP(mean::Real, kernel::SemiSeparable) = ScalableGP(GP(mean, kernel), kernel)
+ScalableGP(mean::AbstractGPs.MeanFunction, kernel::SemiSeparable) = ScalableGP(GP(mean, kernel), kernel)
 
 const FiniteScalableGP = AbstractGPs.FiniteGP{<:ScalableGP}
 
-struct PosteriorGP{Typef<:FiniteScalableGP,Ty<:AbstractVecOrMat{<:Real}} <: AbstractGPs.AbstractGP
+struct PosteriorGP{Typef <: FiniteScalableGP, Ty <: AbstractVecOrMat{<:Real}} <: AbstractGPs.AbstractGP
     f::Typef
     y::Ty
 end
@@ -40,7 +40,7 @@ Compute the posterior Gaussian process `fp` given the GP `f` and the data `y`.
 """
 posterior(f::FiniteScalableGP, y::AbstractVecOrMat{<:Real}) = PosteriorGP(f, y)
 
-""" 
+"""
     _predict_mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
 
     Compute the Posterior mean of the GP at the points τ.
@@ -53,7 +53,7 @@ function _predict_mean(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
     return predict(K, τ, x, y, σ2)
 end
 
-""" 
+"""
     _predict_cov(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real})
     Compute the posterior covariance of the GP at the points τ.
 """
@@ -90,7 +90,7 @@ Compute the standard deviation of the posterior GP at the points τ.
 AbstractGPs.std(fp::PosteriorGP) = sqrt.(diag(_predict_cov(fp, fp.f.x)))
 AbstractGPs.std(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = sqrt.(diag(_predict_cov(fp, τ)))
 
-function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int64=1)
+function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}, N::Int64 = 1)
     μ = mean(fp, τ)
     Σ = cov(fp, τ)
     post_dist = MvNormal(μ, Σ)
@@ -105,7 +105,7 @@ end
 
 Sample `N` realisations from the posterior GP `fp` at the points `τ`.
 """
-function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, N::Int64=1)
+function AbstractGPs.rand(rng::AbstractRNG, fp::PosteriorGP, N::Int64 = 1)
     μ = mean(fp)
     Σ = cov(fp)
     post_dist = MvNormal(μ, Σ)
@@ -120,12 +120,12 @@ AbstractGPs.rand(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = AbstractGPs.ra
 
 function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP)
     σ2 = diag(f.Σy)
-    return simulate(rng, f.f.kernel, f.x, σ2) .+ f.f.f.mean.c
+    return simulate(rng, f.f.kernel, f.x, σ2) + mean_vector(f.f.f.mean, f.x)
 end
 
 function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP, t::AbstractVecOrMat{<:Real})
     σ2 = zeros(length(t))
-    return simulate(rng, f.f.kernel, t, σ2) .+ f.f.f.mean.c
+    return simulate(rng, f.f.kernel, t, σ2) + mean_vector(f.f.f.mean, f.x)
 end
 
 """
@@ -148,6 +148,6 @@ Compute the log-likelihood of the data Y given the GP f.
 """
 function Distributions.logpdf(f::FiniteScalableGP, Y::AbstractVecOrMat{<:Real})
     σ2 = diag(f.Σy)
-    y = Y .- f.f.f.mean.c
+    y = Y .- mean_vector(f.f.f.mean, f.x)
     return log_likelihood(f.f.kernel, f.x, y, σ2)
 end

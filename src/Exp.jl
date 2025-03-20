@@ -24,7 +24,7 @@ end
 
 KernelFunctions.kappa(R::Exp, τ::Real) = Exp_covariance(τ, R.A, R.α)
 KernelFunctions.metric(R::Exp) = Euclidean()
-KernelFunctions.ScaledKernel(R::Exp, number::Real=1.0) = Exp(number * R.A, R.α)
+KernelFunctions.ScaledKernel(R::Exp, number::Real = 1.0) = Exp(number * R.A, R.α)
 
 function celerite_coefs(covariance::Exp)
     a = covariance.A
