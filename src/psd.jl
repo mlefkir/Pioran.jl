@@ -340,28 +340,52 @@ function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_component
     return covariance
 end
 
-function integral(a, c, ap, cp)
-    return sum(
-        (1 / (4sqrt(2))) * a .* c .* (
-            2 * atan.(1 .- (sqrt(2) * ap) ./ c) .-
-                2atan.(1 .+ (sqrt(2) * ap) ./ c) .- 2atan.(1 .- (sqrt(2) .* cp) ./ c) .+
-                2atan.(1 .+ (sqrt(2) * cp) ./ c) .+ log.(ap^2 .- sqrt(2) .* ap .* c .+ c .^ 2) .-
-                log.(ap^2 .+ sqrt(2) * ap * c .+ c .^ 2) .- log.(c .^ 2 .- sqrt(2) .* c .* cp .+ cp^2) .+
-                log.(c .^ 2 .+ sqrt(2) .* c * cp .+ cp^2)
-        )
-    )
+@doc raw"""
+    integral_sho(a, c, x)
+Computes the integral of the SHO basis function of amplitude a and width c for a given x.
+
+This integral is obtained using Equation: 4.2.7.1.3 from the "Handbook of Mathematical Formulas and Integrals" 2009
+
+```math
+    \int \dfrac{a\, {d}x}{(x/c)^4+1} =\dfrac{ac}{4\sqrt2} \left[\ln{\left(\dfrac{x^2+cx\sqrt2+c^2}{x^2-cx\sqrt2+c^2}\right)}+2\arctan{\left(\dfrac{cx\sqrt2}{c^2-x^2}\right)}\right]
+```
+"""
+function integral_sho(a, c, x)
+    norm = @. c .* a / (4√2)
+    poly = @. (x^2 + √2c * x + c^2) / (x^2 - √2c * x + c^2)
+    return sum(@. norm * (log.(poly) + 2atan.(c * √2 * x, (c^2 - x^2))))
 end
 
-function integral2(a, c, ap, cp)
-    return sum(
-        a .* c .* (
-            2atan.(sqrt(3) .- 2ap ./ c) .-
-                2atan.(sqrt(3) .+ 2ap ./ c) .- 4atan.(ap ./ c) .+ 4atan.(cp ./ c) .-
-                2atan.(sqrt(3) .- 2cp ./ c) .+ 2atan.(sqrt(3) .+ 2cp ./ c) .+
-                sqrt(3) * log.(ap^2 .- sqrt(3) * ap * c .+ c .^ 2) .-
-                sqrt(3) * log.(ap^2 .+ sqrt(3) * ap * c .+ c .^ 2) .-
-                sqrt(3) * log.(c .^ 2 .- sqrt(3) * c * cp .+ cp^2) .+
-                sqrt(3) * log.(c .^ 2 .+ sqrt(3) * c * cp .+ cp^2)
-        ) ./ 12
-    )
+@doc raw"""
+    integral_drwcelerite(a, c, x)
+Computes the integral of the DRWCelerite basis function of amplitude `a` and width `c` for a given `x`.
+
+The DRWCelerite basis function is defined as:
+
+```math
+    \psi_6(x) =\dfrac{a}{(x/c)^6+1} = \dfrac{1}{3}\left[\dfrac{1}{1+x^2}+\dfrac{2-x^2}{1-x^2+x^4}
+```
+
+"""
+function integral_drwcelerite(a, c, x)
+    norm = a .* c / 3
+    drw = atan.(x ./ c)
+    poly = @. (x^2 + √3c * x + c^2) / (x^2 - √3c * x + c^2)
+    celerite = @. 0.5 * atan(x^2 - c^2, c * x) + √3 / 4 * log(poly)
+    return sum(norm .* (drw + celerite))
+end
+
+@doc raw"""
+    integrate_basis_function(a,c,x₁,x₂,basis_function)
+
+Computes the integral of the basis function between x₁ and x₂ for a given amplitude a and width c.
+"""
+function integrate_basis_function(a, c, x₁, x₂, basis_function)
+    if basis_function == "SHO"
+        return integral_sho(a, c, x₂) - integral_sho(a, c, x₁)
+    elseif basis_function == "DRWCelerite"
+        return integral_drwcelerite(a, c, x₂) - integral_drwcelerite(a, c, x₁)
+    else
+        error("Unknown basis function: $basis_function, use 'SHO' or 'DRWCelerite'")
+    end
 end

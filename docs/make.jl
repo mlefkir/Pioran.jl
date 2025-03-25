@@ -6,7 +6,7 @@ using DocumenterCitations
 ## Add a bibliography to the documentation
 bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"), style = :authoryear)
 
-BASIC_PAGES = ["explanation.md", "modelling.md", "simulations.md", "timeseries.md", "diagnostics.md"]
+BASIC_PAGES = ["explanation.md", "modelling.md", "simulations.md", "timeseries.md", "diagnostics.md", "basis_functions.md"]
 ADVANCED_PAGES = ["turing.md", "ultranest.md"]
 
 makedocs(
