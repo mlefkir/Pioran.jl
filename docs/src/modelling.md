@@ -35,8 +35,8 @@ These basis functions have analytical Fourier transforms and are used to approxi
 
 ```math
 \begin{align}\begin{split}
-\phi_4(\tau) &= \exp\left(-\pi\sqrt{2}\tau\right) \left(\cos\left(\pi\sqrt{2}\tau\right)+\sin\left(\pi\sqrt{2}\tau\right)\right)\\
-\phi_6(\tau) &=\pi/3\exp{\left(-2\pi \tau\right)}+\exp{\left(-\pi\tau\right)}\left(\pi/3\cos\left(\pi\sqrt{3}\tau\right)+\pi/\sqrt{3}\sin\left(\pi\sqrt{3}\tau\right)\right)\end{split}
+\phi_4(\tau) &= \dfrac{\pi}{\sqrt2} \exp\left(-\pi\sqrt{2}|\tau|\right) \left(\cos\left(\pi\sqrt{2}|\tau|\right)+\sin\left(\pi\sqrt{2}|\tau|\right)\right)\\
+\phi_6(\tau) &=\dfrac{\pi}{3}\exp{\left(-2\pi |\tau|\right)}+\exp{\left(-\pi|\tau|\right)}\left(\pi/3\cos\left(\pi\sqrt{3}|\tau|\right)+\pi/\sqrt{3}\sin\left(\pi\sqrt{3}|\tau|\right)\right)\end{split}
 \end{align}
 ```
 
