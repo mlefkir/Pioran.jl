@@ -215,7 +215,7 @@ function get_approx_coefficients(psd_model::PowerSpectralDensity, f0::Real, fM::
 end
 
 """
-     approximated_psd(f, psd_model, f0, fM; n_components=20, var=1.0, basis_function="SHO")
+     approximated_psd(f, psd_model, f0, fM; n_components=20, norm=1.0, basis_function="SHO")
 
 Return the approximated PSD. This is essentially to check that the model and the approximation are consistent.
 
@@ -225,11 +225,11 @@ Return the approximated PSD. This is essentially to check that the model and the
 - `f0::Real`: the lowest frequency
 - `fM::Real`: the highest frequency
 - `n_components::Integer=20`: the number of basis functions to use
-- `var::Real=1.0`: the variance of the process, integral of the PSD
+- `norm::Real=1.0`: normalisation of the PSD
 - `basis_function::String="SHO"`: the basis function to use, either "SHO" or "DRWCelerite"
 - `individual::Bool=false`: return the individual components
 """
-function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64 = 20, var::Real = 1.0, basis_function::String = "SHO", individual = false)
+function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64 = 20, norm::Real = 1.0, basis_function::String = "SHO", individual = false)
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function = basis_function)
     psd_normalised = get_normalised_psd(psd_model, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
@@ -238,11 +238,11 @@ function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real
         psd = zeros(length(f), n_components)
         if basis_function == "SHO"
             for i in 1:n_components
-                psd[:, i] = amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
+                psd[:, i] = amplitudes[i] * norm ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
             end
         elseif basis_function == "DRWCelerite"
             for i in 1:n_components
-                psd[:, i] = amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
+                psd[:, i] = amplitudes[i] * norm ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
             end
         else
             error("Basis function" * basis_function * "not implemented")
@@ -251,11 +251,11 @@ function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real
         psd = zeros(length(f))
         if basis_function == "SHO"
             for i in 1:n_components
-                psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
+                psd += amplitudes[i] * norm ./ (1 .+ (f ./ spectral_points[i]) .^ 4)
             end
         elseif basis_function == "DRWCelerite"
             for i in 1:n_components
-                psd += amplitudes[i] * var ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
+                psd += amplitudes[i] * norm ./ (1 .+ (f ./ spectral_points[i]) .^ 6)
             end
         else
             error("Basis function" * basis_function * "not implemented")
@@ -265,16 +265,19 @@ function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real
 end
 
 """
-     approx(psd_model, f0, fM, n_components=20, var=1.0; basis_function="SHO")
+    approx(psd_model, f_min, f_max, n_components=20, norm=1.0,S_low::Real=20., S_high::Real=20. ; is_integrated_power::Bool = true, basis_function="SHO")
 
-Approximate the PSD with a sum of basis functions to form a covariance function
+Approximate the PSD with a sum of basis functions to form a covariance function. The PSD model is approximated between `f0=f_min/S_low` and `fM=f_min*S_high`. By default it is normalised by its integral from `f_min` to `f_max` but it can also be normalised by its integral from 0 to infinity using the `variance` argument.
 
 # Arguments
 - `psd_model::PowerSpectralDensity`: model of the PSD
-- `f0::Real`: the lowest frequency
-- `fM::Real`: the highest frequency
+- `f_min::Real`: the minimum frequency in the time series
+- `f_max::Real`: the maximum frequency in the time series
 - `n_components::Integer=20`: the number of basis functions to use
-- `var::Real=1.0`: the variance of the process, integral of the PSD
+- `norm::Real=1.0`: normalisation of the PSD.
+- `S_low::Real=20.0`: scaling factor for the lowest frequency in the approximation.
+- `S_high::Real=20.0`: scaling factor for the lowest frequency in the approximation.
+- `is_integrated_power::Bool = true`: if the norm corresponds to integral of the PSD between `f_min` and `f_max`, if not it is the variance of the process, integral of the PSD from 0 to +inf.
 - `basis_function::String="SHO"`: the basis function to use, either "SHO" or "DRWCelerite"
 
 # Return
@@ -288,51 +291,42 @@ using Pioran
 ```
 
 """
-function approx(psd_model::PowerSpectralDensity, f0::Real, fM::Real, n_components::Int64 = 20, var::Real = 1.0; sample_var = nothing, f_min = nothing, f_max = nothing, basis_function::String = "SHO")
+function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_components::Int64 = 20, norm::Real = 1.0, S_low::Real = 20.0, S_high::Real = 20.0; is_integrated_power::Bool = true, basis_function::String = "SHO")
 
+    f0 = f_min / S_low
+    fM = f_max * S_high
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function = basis_function)
 
     psd_normalised = get_normalised_psd(psd_model, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
 
-    if !isnothing(sample_var)
-        var = sample_var
-        if basis_function == "SHO"
-            variance = integral(amplitudes, spectral_points, f_min, f_max)
-        elseif basis_function == "DRWCelerite"
-            variance = integral2(amplitudes, spectral_points, f_min, f_max) * 2
-        end
-    else
-        if basis_function == "SHO"
-            variance = sum(amplitudes .* spectral_points) #* π / √2 removed as it is also in the expression of a
-        elseif basis_function == "DRWCelerite"
-            variance = sum(amplitudes .* spectral_points) * 2π / 3
-        end
-    end
+    integ = get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function, is_integrated_power)
+    # normalise the amplitudes
+    amplitudes *= norm / integ
 
+    # express the covariance function of the approximation
     if basis_function == "SHO"
 
-        a = amplitudes .* spectral_points * var / variance #  * π / √2 removed as it is also in the expression of a
+        a = amplitudes .* spectral_points * π / √2 # π / √2 was removed as it was also in the expression of var but it is now restored as we do not use the variance anymore
         c = √2 * π .* spectral_points
 
         covariance = SumOfCelerite(a, a, c, c)
 
     elseif basis_function == "DRWCelerite"
 
-        a = amplitudes .* spectral_points * π / 3 * var / variance
+        # these are the coefficients of the celerite part of the DRWCelerite
+        a = amplitudes .* spectral_points * π / 3
         b = √3 * a
         c = π * spectral_points
         d = √3 * c
 
+        # the coefficents of the DRW part are: a, 0, 2c and 0
         aa = [a; a]
         bb = [b; zeros(n_components)]
         cc = [c; 2 * c]
         dd = [d; zeros(n_components)]
         covariance = SumOfCelerite(aa, bb, cc, dd)
-        # covariance = Celerite(a[1], b[1], c[1], d[1]) + Exp(a[1], 2 * c[1])
-        # for i in 2:n_components
-        #     covariance += Celerite(a[i], b[i], c[i], d[i]) + Exp(a[i], 2 * c[i])
-        # end
+
     else
         error("Basis function" * basis_function * "not implemented")
     end
@@ -388,4 +382,33 @@ function integrate_basis_function(a, c, x₁, x₂, basis_function)
     else
         error("Unknown basis function: $basis_function, use 'SHO' or 'DRWCelerite'")
     end
+end
+
+@doc raw"""
+    get_norm_psd(amplitudes,spectral_points,f_min,f_max,basis_function,is_integrated_power)
+
+Get the normalisation of the sum of basis functions.
+
+# Arguments
+- `amplitudes`: amplitude of the basis function
+- `spectral_points`: spectral points of the basis function
+- `f_min::Real`: the minimum frequency in the time series
+- `f_max::Real`: the maximum frequency in the time series
+- `basis_function::String="SHO"`: the basis function to use, either "SHO" or "DRWCelerite"
+- `is_integrated_power::Bool=true`: if the norm corresponds to integral of the PSD between `f_min` and `f_max` or if it is the integral from 0 to infinity.
+
+"""
+function get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function, is_integrated_power)
+    if is_integrated_power
+        # normalise by the integral from f_min to f_max
+        integ = integrate_basis_function(amplitudes, spectral_points, f_min, f_max, basis_function)
+    else
+        # normalise by the total integral of the PSD from 0 to +infty
+        if basis_function == "SHO"
+            integ = sum(amplitudes .* spectral_points) * π / √2 # removed as it is also in the expression of a
+        elseif basis_function == "DRWCelerite"
+            integ = sum(amplitudes .* spectral_points) * 2π / 3
+        end
+    end
+    return integ
 end
