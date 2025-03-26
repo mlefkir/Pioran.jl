@@ -12,7 +12,7 @@ Power law model for the power spectral density
 - `α`: the power law index
 
 ```math
-\mathcal{P}(f) =  (f)^{-α}
+\mathcal{P}(f) =  f^{-α}
 ```
 
 """
@@ -276,7 +276,7 @@ Approximate the PSD with a sum of basis functions to form a covariance function.
 - `n_components::Integer=20`: the number of basis functions to use
 - `norm::Real=1.0`: normalisation of the PSD.
 - `S_low::Real=20.0`: scaling factor for the lowest frequency in the approximation.
-- `S_high::Real=20.0`: scaling factor for the lowest frequency in the approximation.
+- `S_high::Real=20.0`: scaling factor for the highest frequency in the approximation.
 - `is_integrated_power::Bool = true`: if the norm corresponds to integral of the PSD between `f_min` and `f_max`, if not it is the variance of the process, integral of the PSD from 0 to +inf.
 - `basis_function::String="SHO"`: the basis function to use, either "SHO" or "DRWCelerite"
 

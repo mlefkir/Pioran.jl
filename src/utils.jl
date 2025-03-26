@@ -131,13 +131,13 @@ function separate_samples(samples, paramnames, with_log_transform::Bool)
         samples_μ = samples[:, mu_index[1]]
         push!(collected_pars, mu_index[1])
     end
-    # var
-    variance_index = findall(name -> name == "variance", paramnames)
-    if isempty(variance_index)
-        error("The 'variance' parameter is not found in the parameter names")
+    # var or norm
+    norm_index = findall(name -> (name == "variance") ⊻ (name == "norm"), paramnames)
+    if isempty(norm_index)
+        error("The 'variance' or 'norm' parameter corresponding to the normalisation of the PSD is not found in the parameter names")
     else
-        samples_variance = samples[:, variance_index[1]]
-        push!(collected_pars, variance_index[1])
+        samples_norm = samples[:, norm_index[1]]
+        push!(collected_pars, norm_index[1])
     end
     # PSD parameters
     allpars = collect(1:length(paramnames))
@@ -146,7 +146,7 @@ function separate_samples(samples, paramnames, with_log_transform::Bool)
     println("Deducing that the hyperparameter are: ", paramnames[collected_pars])
 
     samples_𝓟 = samples[:, remaining]
-    return samples_𝓟, samples_variance, samples_ν, samples_μ, samples_c
+    return samples_𝓟, samples_norm, samples_ν, samples_μ, samples_c
 end
 
 """

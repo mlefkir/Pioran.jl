@@ -1,7 +1,7 @@
 using CairoMakie
 using VectorizedStatistics
 using LombScargle
-# COV_EXCL_START
+
 function get_theme()
     tw = 1.85
     ts = 10
@@ -171,19 +171,20 @@ function plot_mean_approx(f, residuals, ratios; path = "")
 end
 
 """
-	sample_approx_model(samples, variance_samples, f0, fM, model; n_frequencies=1_000, basis_function="SHO", n_components=20)
+	sample_approx_model(samples, norm_samples, f0, fM, model; n_frequencies=1_000, basis_function="SHO", n_components=20)
 
 Check the approximation of the PSD by computing the residuals and the ratios of the PSD and the approximated PSD
 
 # Arguments
 - `samples::Array{Float64, n}` : The model samples
-- `variance_samples::Array{Float64, 1}` : The variance samples
+- `norm_samples::Array{Float64, 1}` : The normalisation samples
 - `f0::Float64` : The minimum frequency for the approximation of the PSD
 - `fM::Float64` : The maximum frequency for the approximation of the PSD
 - `model::Function` : The model
 - `n_frequencies::Int=1_000` : The number of frequencies to use for the approximation of the PSD
 - `basis_function::String="SHO"` : The basis function for the approximation of the PSD
 - `n_components::Int=20` : The number of components to use for the approximation of the PSD
+- `is_integrated_power=true`: Does the normalisation correspond to the integral of the PSD between two frequencies? If false, it corresponds to the true variance of the process.
 
 # Return
 
@@ -192,7 +193,7 @@ Check the approximation of the PSD by computing the residuals and the ratios of 
 - `residuals::Array{Float64, 2}` : The residuals (psd-approx_psd)
 - `ratios::Array{Float64, 2}` : The ratios (approx_psd/psd)
 """
-function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequencies = 1_000, basis_function = "SHO", n_components = 20)
+function sample_approx_model(samples, norm_samples, f0, fM, model; n_frequencies = 1_000, basis_function = "SHO", n_components = 20, is_integrated_power = true)
     if ndims(samples) == 1
         samples = reshape(samples, 1, length(samples))
     end
@@ -202,9 +203,9 @@ function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequen
     psd = [Pioran.calculate.(f, Ref(model(samples[:, k]...))) for k in 1:P]
     psd = mapreduce(permutedims, vcat, psd)'
     psd ./= psd[1, :]'
-    psd .*= variance_samples'
+    psd .*= norm_samples'
 
-    psd_approx = [Pioran.approximated_psd(f, model(samples[:, k]...), f0, fM, var = variance_samples[k], basis_function = basis_function, n_components = n_components) for k in 1:P]
+    psd_approx = [Pioran.approximated_psd(f, model(samples[:, k]...), f0, fM, norm = norm_samples[k], basis_function = basis_function, n_components = n_components) for k in 1:P]
     psd_approx = mapreduce(permutedims, vcat, psd_approx)'
 
     residuals = psd .- psd_approx
@@ -213,25 +214,26 @@ function sample_approx_model(samples, variance_samples, f0, fM, model; n_frequen
 end
 
 """
-	run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path="", basis_function="SHO", n_components=20)
+	run_diagnostics(prior_samples, norm_samples, f_min, f_max, model, S_low=20.0, S_high=20.0; path="", basis_function="SHO", n_components=20)
 
 Run the prior predictive checks for the model and the approximation of the PSD
 
 # Arguments
 - `prior_samples::Array{Float64, 2}` : Model samples from the prior distribution
-- `variance_samples::Array{Float64, 1}` : The variance samples
-- `f0::Float64` : The minimum frequency for the approximation of the PSD
-- `fM::Float64` : The maximum frequency for the approximation of the PSD
-- `model::Function` : The model
+- `norm_samples::Array{Float64, 1}` : The samples of the normalisation of the PSD
 - `f_min::Float64` : The minimum frequency of the observed data
 - `f_max::Float64` : The maximum frequency of the observed data
+- `model::Function` : The model
+- `S_low::Float64=20.0` : the scaling factor for the appoximation at low frequencies
+- `S_high::Float64=20.0` : the scaling factor for the appoximation at high frequencies
 - `path::String=""` : The path to save the plots
 - `basis_function::String="SHO"` : The basis function for the approximation of the PSD
 - `n_components::Int=20` : The number of components to use for the approximation of the PSD
 """
-function run_diagnostics(prior_samples, variance_samples, f0, fM, model, f_min, f_max; path = "", basis_function = "SHO", n_components = 20)
+function run_diagnostics(prior_samples, norm_samples, f_min, f_max, model, S_low = 20.0, S_high = 20.0; path = "", basis_function = "SHO", n_components = 20)
     println("Running prior predictive checks...")
-    _, _, residuals, ratios, f = sample_approx_model(prior_samples, variance_samples, f0, fM, model, basis_function = basis_function, n_components = n_components)
+    f0, fM = f_min / S_low, f_max * S_high
+    _, _, residuals, ratios, f = sample_approx_model(prior_samples, norm_samples, f0, fM, model, basis_function = basis_function, n_components = n_components)
     fig1 = plot_mean_approx(f, residuals, ratios, path = path)
     fig2 = plot_quantiles_approx(f, f_min, f_max, residuals, ratios, path = path)
     fig3 = plot_boxplot_psd_approx(residuals, ratios, path = path)
@@ -240,7 +242,7 @@ end
 
 
 """
-	run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, with_log_transform; plots="all", n_samples=200, path="", basis_function="SHO", n_frequencies=1000, plot_f_P=false, n_components=20)
+	run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, with_log_transform; S_low=20, S_high =20, plots="all", n_samples=200, path="", basis_function="SHO", n_frequencies=1000, plot_f_P=false, n_components=20)
 
 Run the posterior predictive checks for the model and the approximation of the PSD
 
@@ -250,46 +252,48 @@ Run the posterior predictive checks for the model and the approximation of the P
 - `t::Array{Float64, 1}` : The time series
 - `y::Array{Float64, 1}` : The values of the time series
 - `yerr::Array{Float64, 1}` : The errors of the time series
-- `f0::Float64` : The minimum frequency for the approximation of the PSD
-- `fM::Float64` : The maximum frequency for the approximation of the PSD
 - `model::Function` : The model
 - `with_log_transform::Bool` : If true, the flux is log-transformed
+- `S_low::Float64=20.0` : the scaling factor for the appoximation at low frequencies
+- `S_high::Float64=20.0` : the scaling factor for the appoximation at high frequencies
 - `plots::String or Array{String, 1}` : The type of plots to make. It can be "all", "psd", "lsp", "timeseries" or a combination of them in an array
 - `n_samples::Int=200` : The number of samples to draw from the posterior predictive distribution
 - `path::String="all"` : The path to save the plots
 - `basis_function::String="SHO"` : The basis function for the approximation of the PSD
+- `is_integrated_power = true` : if the norm corresponds to integral of the PSD between `f_min` and `f_max` or if it is the integral from 0 to infinity.
 - `n_frequencies::Int=1000` : The number of frequencies to use for the approximation of the PSD
 - `plot_f_P::Bool=false` : If true, the plots are made in terms of f * PSD
 - `n_components::Int=20` : The number of components to use for the approximation of the PSD
 """
-function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, with_log_transform; plots = "all", n_samples = 100, path = "", basis_function = "SHO", n_frequencies = 1000, plot_f_P = false, n_components = 20)
+function run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, is_integrated_power = true, plots = "all", n_samples = 100, path = "", basis_function = "SHO", n_frequencies = 1000, plot_f_P = false, n_components = 20)
     println("Running posterior predictive checks...")
-    samples_𝓟, samples_variance, samples_ν, samples_μ, samples_c = separate_samples(samples, paramnames, with_log_transform)
+    samples_𝓟, samples_norm, samples_ν, samples_μ, samples_c = separate_samples(samples, paramnames, with_log_transform)
     figs = []
     if plots == "all"
         println("Plotting the posterior predictive power spectral density")
         fig1 = plot_psd_ppc(
             samples_𝓟,
-            samples_variance,
+            samples_norm,
             samples_ν,
             t,
             y,
             yerr,
-            f0,
-            fM,
             model,
+            S_low = S_low,
+            S_high = S_high,
             path = path,
             basis_function = basis_function,
+            is_integrated_power = is_integrated_power,
             plot_f_P = plot_f_P,
             n_components = n_components,
             n_frequencies = n_frequencies,
             with_log_transform = with_log_transform,
         )
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
-        fig2 = plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path = path, plot_f_P = plot_f_P, basis_function = basis_function, n_components = n_components, n_frequencies = n_frequencies)
+        fig2 = plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, path = path, S_low = S_low, S_high = S_high, plot_f_P = plot_f_P, basis_function = basis_function, is_integrated_power = is_integrated_power, n_components = n_components, n_frequencies = n_frequencies)
         println("Plotting the posterior predictive time series")
         fig3, fig4 =
-            plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c = samples_c, n_samples = n_samples, basis_function = basis_function, path = path, n_components = n_components)
+            plot_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform, samples_c = samples_c, n_samples = n_samples, basis_function = basis_function, path = path, n_components = n_components)
         push!(figs, fig1, fig2, fig3, fig4)
     else
 
@@ -297,16 +301,17 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, m
             println("Plotting the posterior predictive power spectral density")
             fig = plot_psd_ppc(
                 samples_𝓟,
-                samples_variance,
+                samples_norm,
                 samples_ν,
                 t,
                 y,
                 yerr,
-                f0,
-                fM,
                 model,
+                S_low = S_low,
+                S_high = S_high,
                 path = path,
                 basis_function = basis_function,
+                is_integrated_power = is_integrated_power,
                 plot_f_P = plot_f_P,
                 n_components = n_components,
                 n_frequencies = n_frequencies,
@@ -316,44 +321,45 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, m
         end
         if "lsp" ∈ plots
             println("Plotting the posterior predictive Lomb-Scargle periodogram")
-            fig = plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, path = path, plot_f_P = plot_f_P, basis_function = basis_function, n_components = n_components, n_frequencies = n_frequencies)
+            fig = plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, path = path, S_low = S_low, S_high = S_high, plot_f_P = plot_f_P, basis_function = basis_function, is_integrated_power = is_integrated_power, n_components = n_components, n_frequencies = n_frequencies, with_log_transform = with_log_transform)
             push!(figs, fig)
         end
         if "timeseries" ∈ plots
             println("Plotting the posterior predictive time series")
             fig1, fig2 =
-                plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, samples_c = samples_c, n_samples = n_samples, basis_function = basis_function, path = path, n_components = n_components)
+                plot_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform, S_low = S_low, S_high = S_high, samples_c = samples_c, n_samples = n_samples, basis_function = basis_function, path = path, n_components = n_components, is_integrated_power = is_integrated_power)
             push!(figs, fig1, fig2)
         end
     end
-    # error("The plots argument is not valid")
-    # end
     return figs
 end
 
 """
-	plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, path="", n_components=20, basis_function="SHO", with_log_transform=false)
+    plot_psd_ppc(samples_𝓟, samples_norm, samples_ν, t, y, yerr, model; S_low = 20.0, S_high = 20.0, plot_f_P = false, n_frequencies = 1000, path = "", n_components = 20, basis_function = "SHO", is_integrated_power = true, with_log_transform = false, save_samples = false)
 
 Plot the posterior predictive power spectral density and the noise levels
 
 # Arguments
 - `samples_𝓟::Array{Float64, n}` : The samples of the model parameters
-- `samples_variance::Array{Float64, 1}` : The variance samples
+- `samples_norm::Array{Float64, 1}` : The normalisation samples, either variance or integrated power between `f_min` or `f_max`.
 - `samples_ν::Array{Float64, 1}` : The ν samples
 - `t::Array{Float64, 1}` : The time series
 - `y::Array{Float64, 1}` : The values of the time series
 - `yerr::Array{Float64, 1}` : The errors of the time series
-- `f0::Float64` : The minimum frequency for the approximation of the PSD
-- `fM::Float64` : The maximum frequency for the approximation of the PSD
 - `model::Function` : The model
-- `plot_f_P::Bool=false` : If true, the plot is made in terms of f * PSD
-- `n_frequencies::Int=1000` : The number of frequencies to use for the approximation of the PSD
-- `n_components::Int=20` : The number of components to use for the approximation of the PSD
-- `basis_function::String="SHO"` : The basis function for the approximation of the PSD
-- `path::String=""` : The path to save the plots
+- `S_low = 20.0`: scaling factor for the lowest frequency in the approximation.
+- `S_high = 20.0`: scaling factor for the highest frequency in the approximation.
+- `plot_f_P::Bool = false` : If true, the plot is made in terms of f * PSD
+- `n_frequencies::Int = 1000` : The number of frequencies to use for the approximation of the PSD
+- `path::String = ""` : The path to save the plots
+- `n_components::Int = 20` : The number of components to use for the approximation of the PSD
+- `basis_function::String = "SHO"` : The basis function for the approximation of the PSD
+- `is_integrated_power::Bool = true` : if the norm corresponds to integral of the PSD between `f_min` and `f_max` or if it is the integral from 0 to infinity.
+- `with_log_transform::Bool = false` : If true, the flux is log-transformed.
+- `save_samples::Bool = false` : Save samples of the psd and approx
 
 """
-function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0, fM, model; plot_f_P = false, n_frequencies = 1000, path = "", n_components = 20, basis_function = "SHO", with_log_transform = false, save_samples = false)
+function plot_psd_ppc(samples_𝓟, samples_norm, samples_ν, t, y, yerr, model; S_low = 20.0, S_high = 20.0, plot_f_P = false, n_frequencies = 1000, path = "", n_components = 20, basis_function = "SHO", is_integrated_power = true, with_log_transform = false, save_samples = false)
     theme = get_theme()
     set_theme!(theme)
 
@@ -365,6 +371,7 @@ function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0
 
     f_min = 1 / (t[end] - t[1])
     f_max = 1 / minimum(dt) / 2.0
+    f0, fM = f_min / S_low, f_max * S_high
 
     mean_dt = mean(dt)
     median_dt = median(dt)
@@ -380,16 +387,17 @@ function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0
     mean_noise_level = 2 * mean_ν * mean_sq_err * mean_dt
     median_noise_level = 2 * median_ν * median_sq_err * median_dt
 
-    P = size(samples_variance, 1)
+    P = size(samples_norm, 1)
     spectral_points, _ = Pioran.build_approx(n_components, f0, fM, basis_function = basis_function)
 
-    psd, psd_approx, _, _, f = sample_approx_model(samples_𝓟', samples_variance, f0, fM, model, n_frequencies = n_frequencies, basis_function = basis_function, n_components = n_components)
+    psd, psd_approx, _, _, f = sample_approx_model(samples_𝓟', samples_norm, f0, fM, model, n_frequencies = n_frequencies, basis_function = basis_function, n_components = n_components)
 
     amplitudes = [Pioran.get_approx_coefficients.(Ref(model(samples_𝓟[k, :]...)), f0, fM, basis_function = basis_function, n_components = n_components) for k in 1:P]
-    amplitudes = mapreduce(permutedims, vcat, amplitudes)'
 
-    psd_m = psd ./ sum(amplitudes .* spectral_points, dims = 1)
-    psd_approx_m = psd_approx ./ sum(amplitudes .* spectral_points, dims = 1)
+    norm = [get_norm_psd(amplitudes[k], spectral_points, f_min, f_max, basis_function, is_integrated_power) for k in 1:P]
+
+    psd_m = psd ./ norm'
+    psd_approx_m = psd_approx ./ norm'
 
     psd_quantiles = vquantile!.(Ref(psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
     psd_approx_quantiles = vquantile!.(Ref(psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
@@ -469,37 +477,45 @@ function plot_psd_ppc(samples_𝓟, samples_variance, samples_ν, t, y, yerr, f0
 end
 
 """
-	plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, n_components=20, bin_fact=10, path="", basis_function="SHO")
+	plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, is_integrated_power = true, n_components=20, bin_fact=10, path="", basis_function="SHO",with_log_transform = true)
 
-Plot the posterior predictive Lomb-Scargle periodogram of random time series from the model and samples
+Plot the posterior predictive Lomb-Scargle periodogram of random time series from the model to compare with the one of the data.
 
 # Arguments
 - `samples_𝓟::Array{Float64, n}` : The samples of the model parameters
-- `samples_variance::Array{Float64, 1}` : The variance samples
+- `samples_norm::Array{Float64, 1}` : The variance samples
 - `samples_ν::Array{Float64, 1}` : The ν samples
 - `samples_μ::Array{Float64, 1}` : The μ samples
 - `t::Array{Float64, 1}` : The time series
 - `y::Array{Float64, 1}` : The values of the time series
 - `yerr::Array{Float64, 1}` : The errors of the time series
-- `f0::Float64` : The minimum frequency for the approximation of the PSD
-- `fM::Float64` : The maximum frequency for the approximation of the PSD
 - `model::Function` : The model
+- `S_low = 20.0`: scaling factor for the lowest frequency in the approximation.
+- `S_high = 20.0`: scaling factor for the highest frequency in the approximation.
 - `plot_f_P::Bool=false` : If true, the plot is made in terms of f * PSD
 - `n_frequencies::Int=1000` : The number of frequencies to use for the approximation of the PSD
 - `n_samples::Int=1000` : The number of samples to draw from the posterior predictive distribution
+- `is_integrated_power::Bool = true` : if the norm corresponds to integral of the PSD between `f_min` and `f_max` or if it is the integral from 0 to infinity.
 - `n_components::Int=20` : The number of components to use for the approximation of the PSD
 - `bin_fact::Int=10` : The binning factor for the LSP
 - `path::String=""` : The path to save the plots
 - `basis_function::String="SHO"` : The basis function for the approximation of the PSD
+- `with_log_transform = true` : Apply a log transform to the data.
+
 
 """
-function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P = false, n_frequencies = 1000, n_samples = 1000, n_components = 20, bin_fact = 10, path = "", basis_function = "SHO")
+function plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model; S_low = 20, S_high = 20, plot_f_P = false, n_frequencies = 1000, n_samples = 1000, is_integrated_power = true, n_components = 20, bin_fact = 10, path = "", basis_function = "SHO", with_log_transform = true)
     #set theme and create output directory
     theme = get_theme()
     set_theme!(theme)
     if !ispath(path)
         mkpath(path)
     end
+    # min and max freqs of the obs data
+    f_min = 1 / (t[end] - t[1])
+    f_max = 1 / minimum(diff(t)) / 2
+    f0, fM = f_min / S_low, f_max * S_high
+
 
     # get the frequencies
     freq = exp.(range(log(f0), log(fM), length = n_frequencies))
@@ -508,7 +524,7 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
     # get the posterior predictive lombscargle periodogram
     @showprogress for k in 1:n_samples
         𝓟 = model(samples_𝓟[k, :]...)
-        𝓡 = approx(𝓟, f0, fM, n_components, samples_variance[k], basis_function = basis_function)
+        𝓡 = approx(𝓟, f_min, f_max, n_components, samples_norm[k], S_low, S_high, basis_function = basis_function, is_integrated_power = is_integrated_power)
         f = ScalableGP(samples_μ[k], 𝓡)
         σ2 = yerr .^ 2 * samples_ν[k]
         fx = f(t, σ2)
@@ -528,7 +544,13 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
         ls_quantiles = vquantile!.(Ref(ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
     end
     # compute the LSP of the observed data
-    ls_obs = lombscargle(t, y, yerr, frequencies = freq)
+    if with_log_transform
+        @assert all(y .> 0) "You have negative values in the time series and you want to take the log! Not on my watch"
+        ls_obs = lombscargle(t, log.(y), yerr ./ y, frequencies = freq)
+    else
+        ls_obs = lombscargle(t, y, yerr, frequencies = freq)
+
+    end
     lsp = freqpower(ls_obs)[2][1:(end - 1)]
     freq_obs = freqpower(ls_obs)[1][1:(end - 1)]
 
@@ -561,11 +583,6 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
         end
         writedlm(f, binned_data)
     end
-
-
-    # min and max freqs of the obs data
-    f_min = 1 / (t[end] - t[1])
-    f_max = 1 / minimum(diff(t)) / 2
 
     # plot the posterior predictive LSP
     fig = Figure(size = (800, 500))
@@ -600,12 +617,15 @@ function plot_lsp_ppc(samples_𝓟, samples_variance, samples_ν, samples_μ, t,
 end
 
 """
-	get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr,f0,fM, model,with_log_transform;samples_c=missing, n_samples=1000)
+	get_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform; S_low=20, S_high =20, t_pred = nothing, samples_c = nothing, n_samples = 1000, n_components = 20, basis_function = "SHO", is_integrated_power = true)
 
 Get the random posterior predictive time series from the model and samples
 """
-function get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred = nothing, samples_c = nothing, n_samples = 1000, n_components = 20, basis_function = "SHO")
+function get_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, t_pred = nothing, samples_c = nothing, n_samples = 1000, n_components = 20, basis_function = "SHO", is_integrated_power = true)
     P = n_samples
+    # min and max freqs of the obs data
+    f_min = 1 / (t[end] - t[1])
+    f_max = 1 / minimum(diff(t)) / 2
 
     if isnothing(samples_ν)
         samples_ν = ones(P)
@@ -636,7 +656,7 @@ function get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_
         𝓟 = model(samples_𝓟[i, :]...)
 
         # Approximation of the PSD to form a covariance function
-        𝓡 = approx(𝓟, f0, fM, n_components, samples_variance[i], basis_function = basis_function)
+        𝓡 = approx(𝓟, f_min, f_max, n_components, samples_norm[i], S_low, S_high, basis_function = basis_function, is_integrated_power = is_integrated_power)
 
         # Build the GP
         f = ScalableGP(samples_μ[i], 𝓡)
@@ -768,39 +788,38 @@ function plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr; path = "")
 end
 
 """
-	plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred=nothing, samples_c=nothing, n_samples=100, n_components=20, basis_function="SHO", path="")
+    plot_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform;S_low = 20, S_high = 20, t_pred = nothing, samples_c = nothing, n_samples = 100, n_components = 20, basis_function = "SHO", path = "",is_integrated_power=true)
 
 Plot the posterior predictive time series and the residuals
 
 # Arguments
 - `samples_𝓟::Matrix{Float64}` : The samples of the model parameters
-- `samples_variance::Vector{Float64}` : The variance samples
+- `samples_norm::Vector{Float64}` : The variance samples
 - `samples_ν::Vector{Float64}` : The noise level samples
 - `samples_μ::Vector{Float64}` : The mean samples
 - `t::Vector{Float64}` : The time series
 - `y::Vector{Float64}` : The values of the time series
 - `yerr::Vector{Float64}` : The errors of the time series
-- `f0::Float64` : The minimum frequency for the approximation of the PSD
-- `fM::Float64` : The maximum frequency for the approximation of the PSD
 - `model::PowerSpectralDensity` : The model
 - `with_log_transform::Bool` : If true, the flux was log-transformed for the inference
+- `S_low = 20.0`: scaling factor for the lowest frequency in the approximation.
+- `S_high = 20.0`: scaling factor for the highest frequency in the approximation.
 - `t_pred::Vector{Float64}=nothing` : The prediction times
 - `samples_c::Vector{Float64}=nothing` : The samples of the constant (if the flux was log-transformed)
 - `n_samples::Int=100` : The number of samples to draw from the posterior predictive distribution
 - `n_components::Int=20` : The number of components to use for the approximation of the PSD
 - `basis_function::String="SHO"` : The basis function for the approximation of the PSD
-
+- `is_integrated_power::Bool = true` : if the norm corresponds to integral of the PSD between `f_min` and `f_max` or if it is the integral from 0 to infinity.
 
 """
-function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform; t_pred = nothing, samples_c = nothing, n_samples = 100, n_components = 20, basis_function = "SHO", path = "")
+function plot_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, t_pred = nothing, samples_c = nothing, n_samples = 100, n_components = 20, basis_function = "SHO", path = "", is_integrated_power = true)
     theme = get_theme()
     set_theme!(theme)
     if !ispath(path)
         mkpath(path)
     end
     # get the posterior predictive time series and the prediction times
-    ts_array, t_pred =
-        get_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform, t_pred = t_pred, samples_c = samples_c, n_samples = n_samples, n_components = n_components, basis_function = basis_function)
+    ts_array, t_pred = get_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform, S_low = S_low, S_high = S_high, t_pred = t_pred, samples_c = samples_c, n_samples = n_samples, n_components = n_components, basis_function = basis_function, is_integrated_power = is_integrated_power)
     # find the indexes of the observed data in the prediction times for the residuals
     indexes = [findall(t_pred -> t_pred == t_i, t_pred)[1] for t_i in t]
 
@@ -822,7 +841,7 @@ function plot_ppc_timeseries(samples_𝓟, samples_variance, samples_ν, samples
     return fig1, fig2
 end
 
-function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_variance, samples_ν, t, y, yerr, p, q; plot_f_P = false, n_frequencies = 1000, path = "", with_log_transform = false)
+function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t, y, yerr, p, q; plot_f_P = false, n_frequencies = 1000, path = "", with_log_transform = false)
     if p != size(samples_rα, 2)
         error("p=$(p) is not equal to the number of columns in samples_rα=$(size(samples_rα, 2))")
     end
@@ -858,8 +877,8 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_variance, samples_�
     mean_noise_level = 2 * mean_ν * mean_sq_err * mean_dt
     median_noise_level = 2 * median_ν * median_sq_err * median_dt
 
-    P = size(samples_variance, 1)
-    psd_samples = [Pioran.calculate(f, CARMA(p, q, convert.(Complex, samples_rα[i, :]), samples_β[i, :], samples_variance[i])) for i in 1:P]
+    P = size(samples_norm, 1)
+    psd_samples = [Pioran.calculate(f, CARMA(p, q, convert.(Complex, samples_rα[i, :]), samples_β[i, :], samples_norm[i])) for i in 1:P]
     psd_samples = mapreduce(permutedims, vcat, psd_samples)
 
     psd_quantiles = vquantile!.(Ref(psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
@@ -922,4 +941,3 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_variance, samples_�
     save(path * "psd_ppc.pdf", fig)
     return fig, ax1
 end
-# COV_EXCL_STOP
