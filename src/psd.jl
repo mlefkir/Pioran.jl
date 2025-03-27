@@ -67,29 +67,6 @@ struct DoubleBendingPowerLaw{T <: Real} <: BendingPowerLaw
     α₃::T
 end
 
-@doc raw"""
-     DoubleBendingPowerLaw_Bis(α₀, f₁, Δα₁, Δf, Δα₂)
-
-    Double bending power law model for the power spectral density
-
-- `α₀`: the first power law index
-- `f₁`: the first bend frequency
-- `Δα₁`: the first difference in power law index
-- `Δf`: scale for the second bend frequency, `f₂ = f₁ * Δf`
-- `Δα₂`: the second difference in power law index
-
-```math
-\mathcal{P}(f) =  \frac{(f/f₁)^{-α_0}}{1 + (f / f₁)^{α_0+\Delta α₁}}\frac{1}{1 + (f / f₁ \Delta f)^{\Delta α₁ + \Delta α₂}}
-```
-"""
-struct DoubleBendingPowerLaw_Bis{T <: Real} <: BendingPowerLaw
-    α₀::T
-    f₁::T
-    Δα₁::T
-    Δf::T
-    Δα₂::T
-end
-
 struct TripleBendingPowerLaw{T <: Real} <: BendingPowerLaw
     α₁::T
     f₁::T
@@ -104,11 +81,6 @@ end
 
     Calculate the power spectral density at frequency f
 """
-function calculate(f, psd::DoubleBendingPowerLaw_Bis)
-    return (f / psd.f₁)^(-psd.α₀) / (1 + (f / psd.f₁)^(psd.α₀ + psd.Δα₁)) / (1 + (f / (psd.f₁ * psd.Δf))^(psd.Δα₁ + psd.Δα₂))
-
-end
-
 function calculate(f, psd::DoubleBendingPowerLaw)
     return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / (psd.f₂))^(psd.α₃ - psd.α₂))
 
