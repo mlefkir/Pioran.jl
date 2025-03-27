@@ -1,6 +1,6 @@
 # Pioran
 
-`Pioran` is a Julia package for the inference of power spectra from arbitrarily sampled time series using Gaussian processes. It is the twin package of the eponymous Python package [pioran](https://github.com/mlefkir/pioran). 
+`Pioran` is a Julia package for the inference of power spectra from arbitrarily sampled time series using Gaussian processes. It is the twin package of the eponymous Python package [pioran](https://github.com/mlefkir/pioran).
 
 ## Installation
 

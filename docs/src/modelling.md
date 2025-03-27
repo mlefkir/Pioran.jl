@@ -6,17 +6,17 @@ We use [`SingleBendingPowerLaw`](@ref) and [`DoubleBendingPowerLaw`](@ref) to mo
 
 ```@example modelling
 using Plots
-using Pioran 
-𝓟1 = SingleBendingPowerLaw(1., .1, 3.4) 
+using Pioran
+𝓟1 = SingleBendingPowerLaw(1., .1, 3.4)
 𝓟2 = SingleBendingPowerLaw(.4, 1e-2, 3.)
 𝓟3 = SingleBendingPowerLaw(.1, 3., 2.4)
 𝓟1d = DoubleBendingPowerLaw(1.2,1e-3,2.4,1.1,4.2)
 𝓟2d = DoubleBendingPowerLaw(0.2,1e-2,1.3,24.3,3.1)
 𝓟3d = DoubleBendingPowerLaw(0.5,1e-3,2.1,91.2,4.9)
 f = 10 .^ range(-4, stop=3, length=1000)
-l = @layout [a b] 
+l = @layout [a b]
 p1 =  plot(f,[𝓟1(f),𝓟2(f),𝓟3(f)],xlabel="Frequency (day^-1)",ylabel="Power Spectral Density",legend=false,framestyle = :box,xscale=:log10,yscale=:log10,ylims=(1e-15,1e1),lw=2)
-p2 =  plot(f,[𝓟1d(f),𝓟2d(f),𝓟3d(f)],xlabel="Frequency (day^-1)",legend=false,framestyle = :box,xscale=:log10,yscale=:log10,ylims=(1e-15,1e1),lw=2) 
+p2 =  plot(f,[𝓟1d(f),𝓟2d(f),𝓟3d(f)],xlabel="Frequency (day^-1)",legend=false,framestyle = :box,xscale=:log10,yscale=:log10,ylims=(1e-15,1e1),lw=2)
 plot(p1,p2,layout=l,size=(700,300),grid=false,left_margin=2Plots.mm,bottom_margin=20Plots.px,title=["Single bending power-law" "Double bending power-law"])
 ```
 
@@ -35,18 +35,18 @@ These basis functions have analytical Fourier transforms and are used to approxi
 
 ```math
 \begin{align}\begin{split}
-\phi_4(\tau) &= \exp\left(-\pi\sqrt{2}\tau\right) \left(\cos\left(\pi\sqrt{2}\tau\right)+\sin\left(\pi\sqrt{2}\tau\right)\right)\\
-\phi_6(\tau) &=\pi/3\exp{\left(-2\pi \tau\right)}+\exp{\left(-\pi\tau\right)}\left(\pi/3\cos\left(\pi\sqrt{3}\tau\right)+\pi/\sqrt{3}\sin\left(\pi\sqrt{3}\tau\right)\right)\end{split}
+\phi_4(\tau) &= \dfrac{\pi}{\sqrt2} \exp\left(-\pi\sqrt{2}|\tau|\right) \left(\cos\left(\pi\sqrt{2}|\tau|\right)+\sin\left(\pi\sqrt{2}|\tau|\right)\right)\\
+\phi_6(\tau) &=\dfrac{\pi}{3}\exp{\left(-2\pi |\tau|\right)}+\exp{\left(-\pi|\tau|\right)}\left(\pi/3\cos\left(\pi\sqrt{3}|\tau|\right)+\pi/\sqrt{3}\sin\left(\pi\sqrt{3}|\tau|\right)\right)\end{split}
 \end{align}
 ```
 
-We need to specify the frequency range `f0` and `fM` over which the approximation is performed. We also need to specify the number of basis functions `J` to use. Once this is done the frequency grid is defined as:
+We need to specify the frequency range `f0=f_min/S_low` and `fM=f_max*S_high` over which the approximation is performed. We also need to specify the number of basis functions `J` to use. Once this is done the frequency grid is defined as:
 
 ```math
-f_j=f_\mathrm{start}\left({f_\mathrm{stop}}/{f_\mathrm{start}}\right)^{j/(J-1)}
+f_j=f_0\left({f_M}/{f_0}\right)^{j/(J-1)}
 ```
 
-The approximation of the power spectral density is then given by
+The approximation of the power spectral density is then given by:
 
 ```math
 \begin{align}
@@ -87,7 +87,7 @@ In order to check the quality of the approximation, we can compute the residuals
 ```@example modelling
 using Distributions
 using Random
-rng = MersenneTwister(1234) 
+rng = MersenneTwister(1234)
 
 min_f_b, max_f_b = 1e-3, 1e3
 function prior_transform(cube)
@@ -99,7 +99,7 @@ function prior_transform(cube)
 end
 
 P = 2000
-unif = rand(rng, 4, P) 
+unif = rand(rng, 4, P)
 priors = mapreduce(permutedims, hcat, [prior_transform(unif[:, i]) for i in 1:P]')
 l = @layout [a b ; c d]
 p1 = histogram(priors[1,:],xlabel="α₁")
@@ -111,14 +111,15 @@ p4 = histogram(priors[4,:],xlabel="variance",bins=bins,xaxis=(:log10,(bins[1],bi
 plot(p1,p2,p3,p4,layout=l,size=(700,300),grid=false,left_margin=2Plots.mm,bottom_margin=20Plots.px,legend=false)
 ```
 
-We can then use the function [`run_diagnostics`](@ref) to assess the quality of the approximation. 
+We can then use the function [`run_diagnostics`](@ref) to assess the quality of the approximation.
 The first argument is an array containing the parameters of the power spectral density, the second argument is the variance of the process. `f_min` and `f_max` are the minimum and maximum frequencies of the time series, this is to show the window of observed frequencies in the plots.
 
 ```@example modelling
 using CairoMakie
 CairoMakie.activate!(type = "png")
 f_min, f_max = 1e-3 * 5, 1e3 / 5
-figs = run_diagnostics(priors[1:3, :], priors[4, :], f0, fM, SingleBendingPowerLaw, f_min,f_max, n_components=20, basis_function="SHO")
+S_low = S_high = 20
+figs = run_diagnostics(priors[1:3, :], priors[4, :], f_min,f_max, SingleBendingPowerLaw, S_low,S_high, n_components=20, basis_function="SHO")
 ```
 The following plots are produced:
 The mean of the residuals and ratios as a function of frequency.
@@ -126,7 +127,7 @@ The mean of the residuals and ratios as a function of frequency.
 figs[1]# hide
 ```
 
-The quantiles of the residuals and ratios as a function of frequency. 
+The quantiles of the residuals and ratios as a function of frequency.
 ```@example modelling
 figs[2]# hide
 ```
@@ -144,21 +145,26 @@ Now that we have checked that approximation hold for our choice of priors we can
 
 ### Building the covariance function
 
-The covariance function using the approximation of the power spectral density is obtained using the function [`approx`](@ref). We need to specify the frequency range `f0` and `fM` over which the approximation is performed, the number of basis functions `J` to use, and the variance of the process - integral of the power spectrum. One can also give the type of basis function to use, the default is `SHO` which corresponds to the basis function $\psi_4$, `DRWCelerite` corresponds to $\psi_6$.
+The covariance function using the approximation of the power spectral density is obtained using the function [`approx`](@ref). We need to specify the frequencies of the observations `f_min` and `f_max` and the scaling factors `S_low` and `S_high` extending the grid of frequencies over which the approximation is performed; Following the notations presented above: `f0=f_min/S_low` and `fM = f_max*S_high`, by default `S_low=S_high=20`. We also need to set the number of basis functions `J` to use, and the normalisation of the power spectrum. One can also give the type of basis function to use, the default is `SHO` which corresponds to the basis function $\psi_4$, `DRWCelerite` corresponds to $\psi_6$.
+
 
 ```@example modelling
 𝓟 = SingleBendingPowerLaw(.4, 1e-1, 3.)
 
-variance = 2.2
-𝓡 = approx(𝓟, f0, fM, 20, variance, basis_function="SHO")
+normalisation = 2.2
+𝓡 = approx(𝓟, f_min, f_max, 20, normalisation, S_low, S_high, basis_function="SHO",is_integrated_power=true)
 ```
+
+ info "Normalisation of the power spectrum"
+
+As can be observed in the code, we also specify the optical argument `is_integrated_power` which tells if the normalisation corresponds to the integrated power between $f_\mathrm{min}$ and $f_\mathrm{max}$. If not, the normalisation corresponds to $\mathcal{R}(0)$ the variance of the process which is the integral of the power spectrum between $0$ and $+\infty$. Both integrals can be computed analytically as described in the Basis functions page.
 
 ### Building the Gaussian process
 
 The Gaussian process is built using the type [`ScalableGP`](@ref). If the mean of the process $\mu$ is known, it can be given as a first argument. Otherwise, the mean is assumed to be zero.
 
 ```@example modelling
-μ = 1.3 
+μ = 1.3
 f = ScalableGP(μ, 𝓡)
 ```
 At the moment, the GP does not include the measurement variance `σ²` and the time values `t`. This is done in the next step.
@@ -166,7 +172,7 @@ At the moment, the GP does not include the measurement variance `σ²` and the t
 using DelimitedFiles # hide
 A = readdlm("data/simu.txt",comments=true) # hide
 t, y, yerr = A[:,1], A[:,2], A[:,3] # hide
-σ² = yerr .^ 2 
+σ² = yerr .^ 2
 fx = f(t, σ²)
 ```
 The log-likelihood of the Gaussian process given the data `y` can be computed using the function `logpdf` from the `Distributions` package.
