@@ -50,22 +50,25 @@ function test_scalableGP_carma_init()
 end
 
 function test_scalableGP_carma_likelihood()
-    function get_quad(rng, p, q, a_min=-4, a_max=4, b_min=-4, b_max=4)
-        log_a = rand(rng, Uniform(a_min, a_max), p)
-        log_b = rand(rng, Uniform(b_min, b_max), q)
-        return exp.(log_a), exp.(log_b)
-    end
-    p, q = 3, 2
+    # function get_quad(rng, p, q, a_min=-4, a_max=4, b_min=-4, b_max=4)
+    #     log_a = rand(rng, Uniform(a_min, a_max), p)
+    #     log_b = rand(rng, Uniform(b_min, b_max), q)
+    #     return exp.(log_a), exp.(log_b)
+    # end
+
+
+
+    p, q = 5, 2
     t = [0.0, 3.0, 3.2, 3.4, 45.5, 101.2]
     y = [1.3, 2.2, 4.21, 2.5, 3.3, 5.2]
     yerr = [0.1, 0.2, 0.1, 0.1, 0.2, 0.1]
     seeds = [567, 123, 890, 456, 321]
     variances = [1.32, 35.3, 242.2, 46.6, 0.3]
     μ_set = [1.2, 0.3, 0.1, 0.46, 0.1]
-
+    f_min,f_max = 1e-3,1e1
     for (k, s) in enumerate(seeds)
         rng = MersenneTwister(s)
-        a, b = get_quad(rng, p, q)
+        a, b = Pioran.sample_quad(p, q, rng, f_min, f_max)#get_quad(rng, p, q)
         rα = quad2roots(a)
         β = roots2coeffs(quad2roots(b))
         𝓒 = CARMA(p, q, rα, β, variances[k])

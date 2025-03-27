@@ -148,4 +148,62 @@ function separate_samples(samples,paramnames,with_log_transform::Bool)
     samples_𝓟 = samples[:,remaining]
     return samples_𝓟, samples_variance, samples_ν, samples_μ, samples_c
 end
+
+"""
+    check_conjugate_pair(r::Vector{Complex})
+
+Check if the roots are complex conjugate pairs and negative real parts
+Returns true if the roots are complex conjugate pairs and false otherwise
+"""
+function check_conjugate_pair(r::Vector{Complex})
+    if any(real.(r).>0)
+        return false
+    end
+    n = length(r)
+    if n%2==0
+        for i in 1:2:n
+            if r[i] != conj(r[i+1])
+                return false
+            end
+        end
+    else
+        for i in 1:2:n-1
+            if r[i] != conj(r[i+1])
+                return false
+            end
+        end
+
+    end
+    return true
+end
+
+"""
+    check_roots_bounds(r::Vector{Complex},f_min::Float64,f_max::Float64)
+
+Check if the roots are within the bounds of the frequency range
+"""
+function check_roots_bounds(r::Vector{Complex},f_min::Float64,f_max::Float64)
+    if all(-f_max.<real.(r).<-f_min) && all(-f_max.<imag.(r).<f_max)
+        return true
+    end
+    return false
+end
+
+"""
+    check_order_imag_roots(r::Vector{Complex})
+
+Check if the imaginary parts of the roots are in ascending order
+"""
+function check_order_imag_roots(r)
+	n = length(r)
+	if n % 2 == 0
+		perm = sortperm((imag.(r[1:2:n])), rev = false)
+	else
+		perm = sortperm((imag.(r[1:2:n-1])), rev = false)
+	end
+	if perm != range(1, length(perm))
+		return false
+	end
+	return true
+end
 # COV_EXCL_STOP

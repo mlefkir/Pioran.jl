@@ -36,3 +36,20 @@ end
 function Exp_covariance(τ, A, α)
     return A * exp.(-α .* τ)
 end
+
+
+### There is still is a discrepancy between the PSD of EXP and Celerite!!!
+### I need to fix this
+function Exp_psd(f, A, α)
+    return A * 2 * α ./ (α^2 .+4π^2 * f.^2)
+end
+
+""" calculate(f, C::Exp)
+    
+    This is the right formula but it disagrees with the Celerite implementation...
+
+    Calculate the power spectral density at frequency f
+"""
+function calculate(f, R::Exp)
+    return Exp_psd.(f, Ref(R.A), Ref(R.α))
+end 
