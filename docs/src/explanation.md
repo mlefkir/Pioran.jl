@@ -37,7 +37,7 @@ Here we model time series data, i.e. data indexed by time. We will assume a one-
 \mathcal{P}(f) = \int_{-\infty}^{+\infty} k(\tau) e^{-2{\rm i}\pi f \tau} {\rm d }\tau \quad  \quad k(\tau) = \int_{-\infty}^{+\infty}  \mathcal{P}(f) e^{2{\rm i}\pi f \tau} {\rm d }f
 ```
 If we could use the power spectral density to compute the covariance function, we could then use the covariance function to compute the likelihood function and infer the parameters of the power spectral density using Gaussian process regression.
-Unfortunately, it is not always easy to compute the covariance function from the power spectral density, for instance the [`DoubleBendingPowerLaw`](@ref) model does not have a known Fourier transform.
+Unfortunately, it is not always easy to compute the covariance function from the power spectral density, for instance the [`DoubleBendingPowerLaw`](@ref) model does not have closed form Fourier transform.
 
 ## Gaussian processes in Pioran
 

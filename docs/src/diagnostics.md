@@ -36,7 +36,7 @@ n_components = 20
 model = SingleBendingPowerLaw
 paramnames = data[1,:]
 array = data[2:end,:]
-figs = run_posterior_predict_checks(array, paramnames, t, y, yerr, f0, fM, model, true; path="", basis_function=basis_function, n_components=n_components)
+figs = run_posterior_predict_checks(array, paramnames, t, y, yerr, model, true; S_low=20., S_high=20., path="", basis_function=basis_function, n_components=n_components, is_integrated_power=false)
 ```
 
 ## In the Fourier domain

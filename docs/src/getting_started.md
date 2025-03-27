@@ -45,12 +45,12 @@ Let's assume we can model the power spectrum with a single-bending power-law mod
 f = 10 .^ range(-3, stop=3, length=1000)
 plot(f, 𝓟.(f), label="Single Bending Power Law",xlabel="Frequency (day^-1)",ylabel="Power Spectral Density",legend=true,framestyle = :box,xscale=:log10,yscale=:log10)
 ```
-To compute the corresponding covariance function, we approximate the power spectral density by a sum of `SHO` power spectral densities using the [`approx`](@ref) function. We need to specify the frequency range `f0` and `fM` over which the approximation is performed. The `variance` of the process can also be given. More details about approximating the power spectral density can be found in the [Approximating the power spectral density](@ref) section of [Modelling](@ref).
+To compute the corresponding covariance function, we approximate the power spectral density by a sum of `SHO` power spectral densities using the [`approx`](@ref) function. The normalisation of the PSD is given using `norm` which corresponds to the integral of the PSD between `f_min` and `f_max`. More details about approximating the power spectral density can be found in the [Approximating the power spectral density](@ref) section of [Modelling](@ref).
 
 ```@example getting_started
-f0, fM = 1e-3, 1e3
-variance = 12.3
-𝓡 = approx(𝓟, f0, fM, 20, variance, basis_function="SHO")
+f_min, f_max = 1/(t[end]-t[1]), 1/2/minimum(diff(t))
+norm = 12.3
+𝓡 = approx(𝓟, f_min, f_max, 20, norm, basis_function="SHO")
 τ = range(0, stop=300, length=1000)
 plot(τ, 𝓡.(τ,0.), label="Covariance function",xlabel="Time lag (days)",ylabel="Autocovariance",legend=true,framestyle = :box)
 ```
@@ -74,7 +74,7 @@ We can combine all these steps in a single function to compute the log-likelihoo
 
 function loglikelihood(y, t, σ, params)
 
-    α₁, f₁, α₂, variance, μ = params
+    α₁, f₁, α₂, norm, μ = params
 
     σ² = σ .^ 2
 
@@ -82,7 +82,7 @@ function loglikelihood(y, t, σ, params)
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
 
     # Approximation of the PSD to form a covariance function
-    𝓡 = approx(𝓟, f0, fM, 20, variance, basis_function="SHO")
+    𝓡 = approx(𝓟, f_min, f_max, 20, norm, basis_function="SHO")
 
     # Build the GP
     f = ScalableGP(μ, 𝓡)

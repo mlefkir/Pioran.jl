@@ -40,13 +40,13 @@ These basis functions have analytical Fourier transforms and are used to approxi
 \end{align}
 ```
 
-We need to specify the frequency range `f0` and `fM` over which the approximation is performed. We also need to specify the number of basis functions `J` to use. Once this is done the frequency grid is defined as:
+We need to specify the frequency range `f0=f_min/S_low` and `fM=f_max*S_high` over which the approximation is performed. We also need to specify the number of basis functions `J` to use. Once this is done the frequency grid is defined as:
 
 ```math
-f_j=f_\mathrm{start}\left({f_\mathrm{stop}}/{f_\mathrm{start}}\right)^{j/(J-1)}
+f_j=f_0\left({f_M}/{f_0}\right)^{j/(J-1)}
 ```
 
-The approximation of the power spectral density is then given by
+The approximation of the power spectral density is then given by:
 
 ```math
 \begin{align}
@@ -118,7 +118,8 @@ The first argument is an array containing the parameters of the power spectral d
 using CairoMakie
 CairoMakie.activate!(type = "png")
 f_min, f_max = 1e-3 * 5, 1e3 / 5
-figs = run_diagnostics(priors[1:3, :], priors[4, :], f0, fM, SingleBendingPowerLaw, f_min,f_max, n_components=20, basis_function="SHO")
+S_low = S_high = 20
+figs = run_diagnostics(priors[1:3, :], priors[4, :], f_min,f_max, SingleBendingPowerLaw, S_low,S_high, n_components=20, basis_function="SHO")
 ```
 The following plots are produced:
 The mean of the residuals and ratios as a function of frequency.
@@ -144,14 +145,19 @@ Now that we have checked that approximation hold for our choice of priors we can
 
 ### Building the covariance function
 
-The covariance function using the approximation of the power spectral density is obtained using the function [`approx`](@ref). We need to specify the frequency range `f0` and `fM` over which the approximation is performed, the number of basis functions `J` to use, and the variance of the process - integral of the power spectrum. One can also give the type of basis function to use, the default is `SHO` which corresponds to the basis function $\psi_4$, `DRWCelerite` corresponds to $\psi_6$.
+The covariance function using the approximation of the power spectral density is obtained using the function [`approx`](@ref). We need to specify the frequencies of the observations `f_min` and `f_max` and the scaling factors `S_low` and `S_high` extending the grid of frequencies over which the approximation is performed; Following the notations presented above: `f0=f_min/S_low` and `fM = f_max*S_high`, by default `S_low=S_high=20`. We also need to set the number of basis functions `J` to use, and the normalisation of the power spectrum. One can also give the type of basis function to use, the default is `SHO` which corresponds to the basis function $\psi_4$, `DRWCelerite` corresponds to $\psi_6$.
+
 
 ```@example modelling
 𝓟 = SingleBendingPowerLaw(.4, 1e-1, 3.)
 
-variance = 2.2
-𝓡 = approx(𝓟, f0, fM, 20, variance, basis_function="SHO")
+normalisation = 2.2
+𝓡 = approx(𝓟, f_min, f_max, 20, normalisation, S_low, S_high, basis_function="SHO",is_integrated_power=true)
 ```
+
+ info "Normalisation of the power spectrum"
+
+As can be observed in the code, we also specify the optical argument `is_integrated_power` which tells if the normalisation corresponds to the integrated power between $f_\mathrm{min}$ and $f_\mathrm{max}$. If not, the normalisation corresponds to $\mathcal{R}(0)$ the variance of the process which is the integral of the power spectrum between $0$ and $+\infty$. Both integrals can be computed analytically as described in the Basis functions page.
 
 ### Building the Gaussian process
 

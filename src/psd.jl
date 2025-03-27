@@ -357,7 +357,7 @@ Computes the integral of the DRWCelerite basis function of amplitude `a` and wid
 The DRWCelerite basis function is defined as:
 
 ```math
-    \psi_6(x) =\dfrac{a}{(x/c)^6+1} = \dfrac{1}{3}\left[\dfrac{1}{1+x^2}+\dfrac{2-x^2}{1-x^2+x^4}
+    \int \dfrac{a\, {d}x}{(x/c)^6+1} =\dfrac{ac}{3} \left[ \arctan{(x/c)} +\dfrac{\sqrt3}{4}\ln{\left(\dfrac{x^2+xc\sqrt3+c^2}{x^2-xc\sqrt3+c^2}\right)}+\dfrac{1}{2}\arctan{\left(\dfrac{x^2-c^2}{xc}\right)}\right]
 ```
 
 """

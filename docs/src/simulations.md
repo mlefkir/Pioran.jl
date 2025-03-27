@@ -13,15 +13,17 @@ using Pioran
 rng = MersenneTwister(1234)
 # Define power spectral density function
 𝓟 = SingleBendingPowerLaw(0.3,1e-2,2.9)
-f0,fM = 1e-3, 1e3
+f_min, f_max = 1e-3, 1e3
+f0,fM = f_min/20.,f_max*20.
 f = 10 .^ range(log10(f0), log10(fM), length=1000)
 plot(f, 𝓟(f), xlabel="Frequency (day^-1)",ylabel="Power Spectral Density",legend=false,framestyle = :box,xscale=:log10,yscale=:log10,lw=2)
 ```
 Then we approximate it to form a covariance function. We then build the Gaussian process and draw realisations from it using [`rand`](@ref).
 ```@example drawing_samples
+
 variance = 15.2
 # Approximation of the PSD to form a covariance function
-𝓡 = approx(𝓟, f0, fM, 20, variance, basis_function="SHO")
+𝓡 = approx(𝓟, f_min, f_max, 20, variance, basis_function="SHO")
 μ = 1.3
 # Build the GP
 f = ScalableGP(μ, 𝓡) # Define the GP

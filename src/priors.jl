@@ -1,3 +1,5 @@
+using Bijectors
+
 # COV_EXCL_START
 @doc raw"""
     TwoUniformDependent(a, b, c, ϵ)
