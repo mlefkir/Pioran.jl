@@ -616,6 +616,7 @@ function plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, 
     return fig
 end
 
+# COV_EXCL_START
 """
 	get_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform; S_low=20, S_high =20, t_pred = nothing, samples_c = nothing, n_samples = 1000, n_components = 20, basis_function = "SHO", is_integrated_power = true)
 
@@ -941,3 +942,4 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t
     save(path * "psd_ppc.pdf", fig)
     return fig, ax1
 end
+# COV_EXCL_STOP

@@ -159,6 +159,7 @@ See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....1
     return logdetD
 end
 
+# COV_EXCL_START
 """
     get_values!(a, b, c, d, zp, U, V, P, D, t)
 
@@ -248,7 +249,7 @@ end
     𝓛 = @turbo -sum(log.(D)) / 2 - N * log(2π) / 2 - y'zp / 2
     return 𝓛
 end
-
+# COV_EXCL_STOP
 """
     log_likelihood(cov, τ, y, σ2)
 
