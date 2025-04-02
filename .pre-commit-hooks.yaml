@@ -1,8 +1,0 @@
----
-- id: runic
-  name: check runic formatting
-  description: "Runic.jl code formatter"
-  language: julia
-  entry: src/runic.jl
-  types: [julia]
-  minimum_pre_commit_version: "4.1.0"
