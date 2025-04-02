@@ -7,8 +7,7 @@ Pioran is a Julia package to estimate bending power-law power spectrum of time s
 
 [![Basis functions of the bending power-law model](./extra/approximation.svg)](#)
 
-The method is described in [https://arxiv.org/abs/2501.05886](https://arxiv.org/abs/2501.05886) (Submitted to MNRAS).
-
+The method is described in [https://arxiv.org/abs/2501.05886](https://arxiv.org/abs/2501.05886).
 ## Installation
 
 ```julia

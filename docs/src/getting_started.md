@@ -1,5 +1,7 @@
 # Getting started
 
+This very brief tutorial introduces on how to obtain a likelihood function to fit a bending power-law power spectrum model to some time series data.
+
 As `Pioran` is written in Julia, you need to install Julia first. Please refer to [the official website](https://julialang.org/downloads/) for the installation.
 
 ## Installation
@@ -37,25 +39,34 @@ t, y, yerr = A[:,1], A[:,2], A[:,3] # hide
 scatter(t, y,yerr=yerr, label="data",xlabel="Time (days)",ylabel="Value",legend=false,framestyle = :box,ms=3)
 ```
 
-Let's assume we can model the power spectrum with a single-bending power-law model [`SingleBendingPowerLaw`](@ref).
+Let's assume we can model the power spectrum with a single-bending power-law model [`SingleBendingPowerLaw`](@ref). We can define a power spectral density (PSD) as follows:
 
 ```@example getting_started
 α₁, f₁, α₂ = 0.3, 0.03, 3.2
 𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
+```
+We can plot the PSD:
+```@example getting_started
 f = 10 .^ range(-3, stop=3, length=1000)
 plot(f, 𝓟.(f), label="Single Bending Power Law",xlabel="Frequency (day^-1)",ylabel="Power Spectral Density",legend=true,framestyle = :box,xscale=:log10,yscale=:log10)
 ```
-To compute the corresponding covariance function, we approximate the power spectral density by a sum of `SHO` power spectral densities using the [`approx`](@ref) function. The normalisation of the PSD is given using `norm` which corresponds to the integral of the PSD between `f_min` and `f_max`. More details about approximating the power spectral density can be found in the [Approximating the power spectral density](@ref) section of [Modelling](@ref).
+To compute the corresponding covariance function, we need to calculate the inverse Fourier transform of the PSD. However it is very hard, to my knowledge there is no closed form for this integral. We could use the discrete Fourier transform but it would be limiting in terms of performance and one would need to use interpolation to evaluate the function at any given point. Instead, we approximate the PSD model with a sum of basis functions named `SHO` or `DRWCelerite` using the [`approx`](@ref) function.
+
 
 ```@example getting_started
 f_min, f_max = 1/(t[end]-t[1]), 1/2/minimum(diff(t))
 norm = 12.3
 𝓡 = approx(𝓟, f_min, f_max, 20, norm, basis_function="SHO")
+```
+The normalisation of the PSD is given using `norm` which corresponds to the integral of the PSD between `f_min` and `f_max`. More details about approximating the power spectral density can be found in the [Approximating the power spectral density](@ref) section of [Modelling](@ref).
+We can also plot the autocovariance function:
+
+```@example getting_started
 τ = range(0, stop=300, length=1000)
 plot(τ, 𝓡.(τ,0.), label="Covariance function",xlabel="Time lag (days)",ylabel="Autocovariance",legend=true,framestyle = :box)
 ```
 
-We can now build a Gaussian process $f$ which uses the quasi-separable struct of the covariance function to speed up the computations. If the mean of the process $\mu$ is known, it can be given as an argument. Otherwise, the mean is assumed to be zero.
+We can now build a Gaussian Process (GP) $f$ which uses the quasi-separable structure of the covariance function to speed up the computations, see [2017AJ....154..220F](@citet). If the mean of the process $\mu$ is known, it can be given as an argument. Otherwise, the mean is assumed to be zero. The GP is constructed as follows:
 
 ```@example getting_started
 μ = 1.3
