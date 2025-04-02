@@ -155,7 +155,7 @@ normalisation = 2.2
 
  info "Normalisation of the power spectrum"
 
-As can be observed in the code, we also specify the optical argument `is_integrated_power` which tells if the normalisation corresponds to the integrated power between $f_\mathrm{min}$ and $f_\mathrm{max}$. If not, the normalisation corresponds to $\mathcal{R}(0)$ the variance of the process which is the integral of the power spectrum between $0$ and $+\infty$. Both integrals can be computed analytically as described in: [`Integral of the basis functions`](@ref).
+As can be observed in the code, we also specify the optical argument `is_integrated_power` which tells if the normalisation corresponds to the integrated power between $f_\mathrm{min}$ and $f_\mathrm{max}$. If not, the normalisation corresponds to $\mathcal{R}(0)$ the variance of the process which is the integral of the power spectrum between $0$ and $+\infty$. Both integrals can be computed analytically as described in: [Integral of the basis functions](@ref).
 
 ### Building the Gaussian process
 
