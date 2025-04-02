@@ -1,0 +1,6 @@
+---
+- id: runic
+  name: check runic formatting
+  description: "Runic.jl code formatter"
+  language: julia
+  types: [julia]
