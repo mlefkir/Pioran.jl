@@ -1,9 +1,9 @@
 # Continuous autoregressive moving average (CARMA)
 
 Continuous autoregressive moving average (CARMA) processes are a generalization of ARMA processes to continuous time
-[2014ApJ...788...33K](@cite) introduced CARMA processes based on the seminal work of [jonesackerson](@cite), [belcher1994](@cite) and [JONES1981651](@cite). 
+[2014ApJ...788...33K](@cite) introduced CARMA processes based on the seminal work of [jonesackerson](@cite), [belcher1994](@cite) and [JONES1981651](@cite).
 
-CARMA processes can be modelled with `Pioran.jl`, as these can be written as a celerite process [2017AJ....154..220F](@citep). 
+CARMA processes can be modelled with `Pioran.jl`, as these can be written as a celerite process [2017AJ....154..220F](@citep).
 
 !!! warning
     The implementation of the CARMA process is still experimental and should be used with caution and tested thoroughly.
@@ -92,7 +92,7 @@ end
           end
 
       end
- 
+
       if q % 2 == 0  # all roots are complex conjugates
           # we first fill the quadratic coefficients with pair indices
           for i in 2:2:q
@@ -169,7 +169,7 @@ end
     # Build the GP
     f = ScalableGP(μ, 𝓒)
 
-    y ~ f(t, σ²) 
+    y ~ f(t, σ²)
     return nothing
 end
 ```

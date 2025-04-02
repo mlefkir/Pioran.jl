@@ -11,4 +11,5 @@ using Test
     include("test_scalablegp.jl")
     include("test_predict_celerite.jl")
     include("test_carma.jl")
+    include("test_plots.jl")
 end

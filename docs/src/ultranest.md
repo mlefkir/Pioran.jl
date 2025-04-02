@@ -67,7 +67,7 @@ MPI.Init()
 
 ## Modelling with ultranest
 
-We assume the reader is familiar with nested sampling and the `ultranest` package. 
+We assume the reader is familiar with nested sampling and the `ultranest` package.
 
 ### Priors
 

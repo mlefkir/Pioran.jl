@@ -14,7 +14,7 @@ t, y, σ = data[:, 1], data[:, 2], data[:, 3]
 
 ## Log-normal distributed time series
 
-If we assume the time series to be log-normally distributed, we can use the `log` function to make it normally distributed. In addition, we need to rescale the measurement variance to account for the transformation. We also add a constant `c` to the time series to account for a possible offset. The parameter `ν` is used to rescale the measurement variance, in case the errors are underestimated or overestimated. 
+If we assume the time series to be log-normally distributed, we can use the `log` function to make it normally distributed. In addition, we need to rescale the measurement variance to account for the transformation. We also add a constant `c` to the time series to account for a possible offset. The parameter `ν` is used to rescale the measurement variance, in case the errors are underestimated or overestimated.
 The transformation is given by
 ```julia
     σ² = ν .* σ .^ 2 ./ (y .- c) .^ 2
@@ -29,7 +29,7 @@ Then the Gaussian process can be built as shown before:
 
 ## Defining the priors
 
-The prior probability distribution of the parameters of the Gaussian process can be defined using the `Distributions` package. See the 
+The prior probability distribution of the parameters of the Gaussian process can be defined using the `Distributions` package. See the
 [documentation](https://juliastats.org/Distributions.jl/stable/) for more details.
 
 ```@example priors
@@ -77,7 +77,7 @@ plot(x, pdf.(ν, x), label="ν prior", xlabel="ν", ylabel="pdf(ν)",framestyle 
 
 ### Mean of the time series
 
-In a Bayesian framework defining the prior for the mean `μ` and the variance `variance` can be challenging if we have no a priori information about the time series. A solution can be to randomly sample values from the time series and use them to define the prior distributions. The function [`extract_subset`](@ref) can be used to extract a small - 3 per cent - subset of the time series and compute the mean `x̄` and variance `va` of the subset. The remaining values are returned to be used in the inference. 
+In a Bayesian framework defining the prior for the mean `μ` and the variance `variance` can be challenging if we have no a priori information about the time series. A solution can be to randomly sample values from the time series and use them to define the prior distributions. The function [`extract_subset`](@ref) can be used to extract a small - 3 per cent - subset of the time series and compute the mean `x̄` and variance `va` of the subset. The remaining values are returned to be used in the inference.
 
 If we assume the time series to be log-normally distributed then the log of the subset is taken to provide an estimate of the mean and variance this is done by setting `take_log=true`. See the example below:
 

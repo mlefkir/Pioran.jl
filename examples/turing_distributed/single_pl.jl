@@ -17,7 +17,7 @@ num_chains = nworkers();
 
     fname = replace(split(filename, "/")[end], ".txt" => "_single")
     dir = "inference/" * fname
-    data = readdlm(filename, comments=true)
+    data = readdlm(filename, comments = true)
     t, y, yerr = data[:, 1], data[:, 2], data[:, 3]
 
     # Frequency range for the approx and the prior
@@ -46,7 +46,7 @@ end
     variance ~ LogNormal(log(0.5), 1.25)
     ν ~ Gamma(2, 0.5)
     μ ~ Normal(0, 2)
-    c ~ LogUniform(1e-6, minimum(y) * 0.99)
+    c ~ LogUniform(1.0e-6, minimum(y) * 0.99)
 
     # Rescale the measurement variance
     σ² = ν .* σ .^ 2 ./ (y .- c) .^ 2
@@ -58,13 +58,13 @@ end
     𝓟 = model(α₁, f₁, α₂)
 
     # Approximation of the PSD to form a covariance function
-    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function=basis_function)
+    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function = basis_function)
 
     # Build the GP
     f = ScalableGP(μ, 𝓡)
 
     # sample the conditioned distribution
-    return y ~ f(t, σ²) # <- this means that our data y is distributed according 
+    return y ~ f(t, σ²) # <- this means that our data y is distributed according
     # to the GP f conditioned with input t and variance σ²
 end
 
@@ -74,16 +74,16 @@ end
     sampler = externalsampler(AdvancedHMC.NUTS(tap))
 end
 
-# either 
+# either
 # HMCchains = sample(GP_inference(y, t, yerr), externalsampler(nuts), MCMCDistributed(),1000,num_chains, n_adapts=n_adapts, progress=true)
 
-# or 
-HMCchains = pmap(c -> sample(inference_model(y, t, yerr), sampler, 1000; n_adapts=n_adapts,save_state=true, progress=true), 1:num_chains)
-total_chainHMC = chainscat(HMCchains...)# not needed in the previous case
+# or
+HMCchains = pmap(c -> sample(inference_model(y, t, yerr), sampler, 1000; n_adapts = n_adapts, save_state = true, progress = true), 1:num_chains)
+total_chainHMC = chainscat(HMCchains...) # not needed in the previous case
 
 if !isdir("inference/")
     mkpath("inference/")
 end
-h5open(dir*".h5", "w") do file
+h5open(dir * ".h5", "w") do file
     write(file, total_chainHMC)
 end

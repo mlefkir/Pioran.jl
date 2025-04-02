@@ -36,13 +36,13 @@ n_components = 20
 model = SingleBendingPowerLaw
 paramnames = data[1,:]
 array = data[2:end,:]
-figs = run_posterior_predict_checks(array, paramnames, t, y, yerr, f0, fM, model, true; path="", basis_function=basis_function, n_components=n_components)
+figs = run_posterior_predict_checks(array, paramnames, t, y, yerr, model, true; S_low=20., S_high=20., path="", basis_function=basis_function, n_components=n_components, is_integrated_power=false)
 ```
 
 ## In the Fourier domain
 
 We can plot the posterior predictive distribution of the power spectral density and the approximate power spectral density.
-We can verify if the approximation is valid with the posterior samples. The noise level is given by $2 \nu \sigma^2_{\rm yerr}\Delta t$. 
+We can verify if the approximation is valid with the posterior samples. The noise level is given by $2 \nu \sigma^2_{\rm yerr}\Delta t$.
 
 This figure is plotted using the function [`Pioran.plot_psd_ppc`](@ref).
 ```@example diagnostics
@@ -65,7 +65,7 @@ figs[3]
 !!! note
     As mentioned in [Sampling from the conditioned distribution](@ref) it can be very expensive to sample from the conditioned distribution, especially if the number of points is large.
 
-Finally, we can compute the residuals of the realisations and the data. This figure is plotted using the function [`Pioran.plot_residuals_diagnostics`](@ref). The distribution of the residuals is also plotted, the lower panel shows the autocorrelation of the residuals. One should note that the lags of the autocorrelation are not the same as the lags of the time series. The lags are in indexes of the residuals, therefore it may be difficult to interpret the autocorrelation in terms of time and realisation of a white noise process. 
+Finally, we can compute the residuals of the realisations and the data. This figure is plotted using the function [`Pioran.plot_residuals_diagnostics`](@ref). The distribution of the residuals is also plotted, the lower panel shows the autocorrelation of the residuals. One should note that the lags of the autocorrelation are not the same as the lags of the time series. The lags are in indexes of the residuals, therefore it may be difficult to interpret the autocorrelation in terms of time and realisation of a white noise process.
 
 ```@example diagnostics
 figs[4]
