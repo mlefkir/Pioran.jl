@@ -7,7 +7,7 @@ Pioran is a Julia package to estimate bending power-law power spectrum of time s
 
 [![Basis functions of the bending power-law model](./extra/approximation.svg)](#)
 
-The method is described in [https://arxiv.org/abs/2501.05886](https://arxiv.org/abs/2501.05886).
+The method is described in [Lefkir et. al 2025](https://ui.adsabs.harvard.edu/abs/2025MNRAS.539.1775L/abstract).
 ## Installation
 
 ```julia
@@ -21,3 +21,8 @@ See the documentation at [https://www.mehdylefkir.fr/Pioran.jl](https://www.mehd
 ## Examples
 
 Example scripts are provided in the [examples](./examples) directory. To infer the parameters of the power spectrum, I use either [`Turing.jl`](https://github.com/TuringLang/Turing.jl) for Hamiltonian Monte Carlo or the Python library [`ultranest`](https://github.com/JohannesBuchner/UltraNest) for nested sampling. The scripts are written in a way that you can use either of these libraries.
+
+
+## Citing the method
+
+If this method or code was useful to you, you can cite [Lefkir et. al 2025](https://ui.adsabs.harvard.edu/abs/2025MNRAS.539.1775L/abstract) for method and [Foreman-Mackey, et al. 2017](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F/abstract) for the celerite algorithm.
