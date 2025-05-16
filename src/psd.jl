@@ -94,6 +94,121 @@ function calculate(f, psd::TripleBendingPowerLaw)
     return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / psd.f₂)^(psd.α₃ - psd.α₂)) / (1 + (f / psd.f₃)^(psd.α₄ - psd.α₃))
 end
 
+@doc raw"""
+	QPO(S₀, f₀,A Q)
+
+Lorentzian model for the power spectral density
+
+- `S₀`: the amplitude at the peak
+- `f₀`: the central frequency
+- `Q`: quality factor
+
+```math
+\mathcal{P}(f) =  \frac{A}{4\pi^2 (f - f₀)^2 + γ^2}
+```
+"""
+struct QPO{TS₀ <: Real, Tf₀ <: Real, TQ <: Real} <: PowerSpectralDensity
+    S₀::TS₀
+    f₀::Tf₀
+    Q::TQ
+
+end
+
+QPO(f₀::Tf₀, Q::TQ) where {Tf₀ <: Real, TQ <: Real} = QPO(1.0, f₀, Q)
+
+
+function calculate(f, psd::QPO)
+    return psd.S₀ * psd.f₀^4 ./ ((f .^ 2 .- psd.f₀ .^ 2) .^ 2 .+ f .^ 2 .* psd.f₀^2 / psd.Q^2)
+end
+
+struct SumOfPowerSpectralDensity{Tp <: Vector{<:PowerSpectralDensity}} <: PowerSpectralDensity
+    psd::Tp
+end
+
+
+function Base.:+(a::PowerSpectralDensity, b::PowerSpectralDensity)
+    return SumOfPowerSpectralDensity([a, b])
+end
+
+function Base.:+(a::PowerSpectralDensity, b::SumOfPowerSpectralDensity)
+    return SumOfPowerSpectralDensity([a; b.psd])
+end
+
+function Base.:+(a::SumOfPowerSpectralDensity, b::PowerSpectralDensity)
+    return SumOfPowerSpectralDensity([a.psd; b])
+end
+
+function calculate(f, model::SumOfPowerSpectralDensity)
+    return sum(p(f) for p in model.psd)
+end
+
+
+"""
+	 separate_psd(psd::PowerSpectralDensity)
+
+Separate the PSD into its BendingPowerLaw components and other components if it is a sum of PSDs
+"""
+function separate_psd(psd::PowerSpectralDensity)
+    if isa(psd, BendingPowerLaw)
+        return psd, nothing
+    elseif isa(psd, SumOfPowerSpectralDensity)
+        cont = isa.(psd.psd, BendingPowerLaw)
+        if length(psd.psd[cont]) < 2
+            psd_continuum = psd.psd[cont][1]
+        else
+            psd_continuum = SumOfPowerSpectralDensity(psd.psd[cont])
+        end
+        psd_line = psd.psd[.!cont]
+
+        return psd_continuum, psd_line
+    else
+        return nothing, psd
+    end
+end
+
+"""
+     convert_feature(psd_feature)
+
+Convert a PSD feature to a covariance function
+Only QPO is implemented
+
+# Arguments
+- `psd_feature::PowerSpectralDensity`: the PSD feature
+
+# Return
+- `covariance::SemiSeparable`: the covariance function
+"""
+function convert_feature(psd_feature::PowerSpectralDensity)
+    if psd_feature isa QPO
+        Δ = sqrt(4 * psd_feature.Q^2 - 1)
+
+        a = psd_feature.S₀ * psd_feature.f₀ * psd_feature.Q *2π
+        b = a / Δ
+        c = 2π*psd_feature.f₀ / psd_feature.Q / 2
+        d = 2π*psd_feature.f₀ * Δ / 2 / psd_feature.Q
+        return [a, b, c, d]
+    else
+        error("Feature $(typeof(psd_feature)) not implemented")
+    end
+end
+
+"""
+     get_covariance_from_psd(psd_features)
+
+Get the covariance function from the PSD features
+"""
+function get_covariance_from_psd(psd_features)
+    if psd_features isa Vector{<:PowerSpectralDensity}
+        cov = convert_feature(psd_features[1])
+        for i in 2:length(psd_features)
+            cov = hcat(cov, convert_feature(psd_features[i]))
+        end
+        return cov
+    else
+        return convert_feature(psd_features)
+    end
+end
+
 (psd::PowerSpectralDensity)(f) = calculate.(f, Ref(psd))
 
 """
@@ -269,7 +384,12 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
     fM = f_max * S_high
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function = basis_function)
 
-    psd_normalised = get_normalised_psd(psd_model, spectral_points)
+    # get the psd of the continuum
+    psd_continuum, psd_features = separate_psd(psd_model)
+
+    @assert !isnothing(psd_continuum) "The PSD model should contain at least one BendingPowerLaw component to be approximated"
+
+    psd_normalised = get_normalised_psd(psd_continuum, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
 
     integ = get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function, is_integrated_power)
@@ -281,9 +401,18 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
 
         a = amplitudes .* spectral_points * π / √2 # π / √2 was removed as it was also in the expression of var but it is now restored as we do not use the variance anymore
         c = √2 * π .* spectral_points
+        if isnothing(psd_features)
+            covariance = SumOfCelerite(a, a, c, c)
+        else
+            cov_features = Pioran.get_covariance_from_psd(psd_features)
 
-        covariance = SumOfCelerite(a, a, c, c)
-
+            covariance = SumOfCelerite(
+                [a; cov_features[1]],
+                [a; cov_features[2]],
+                [c; cov_features[3]],
+                [c; cov_features[4]]
+            )
+        end
     elseif basis_function == "DRWCelerite"
 
         # these are the coefficients of the celerite part of the DRWCelerite
@@ -297,8 +426,17 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
         bb = [b; zeros(n_components)]
         cc = [c; 2 * c]
         dd = [d; zeros(n_components)]
-        covariance = SumOfCelerite(aa, bb, cc, dd)
-
+        if isnothing(psd_features)
+            covariance = SumOfCelerite(aa, bb, cc, dd)
+        else
+            cov_features = Pioran.get_covariance_from_psd(psd_features)
+            covariance = SumOfCelerite(
+                [aa; cov_features[1]],
+                [bb; cov_features[2]],
+                [cc; cov_features[3]],
+                [dd; cov_features[4]]
+            )
+        end
     else
         error("Basis function" * basis_function * "not implemented")
     end
