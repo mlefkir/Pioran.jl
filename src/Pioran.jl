@@ -8,7 +8,7 @@ using AbstractGPs
 using LinearAlgebra
 using Distributions
 using Random
-using Turing
+using Bijectors
 using DelimitedFiles
 using StatsBase
 using ProgressMeter

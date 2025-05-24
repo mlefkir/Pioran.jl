@@ -152,14 +152,14 @@ function test_scalableGP_posterior()
     @testset "Scalable GP check mean" begin
         m = mean(fp)
         mx = mean(fp, tx)
-        @test isfinite(m)
+        @test all(isfinite.(m))
         @test m ≈ Pioran.predict_direct(fp.f.f.kernel, fp.f.x, fp.f.x, fp.y, yerr .^ 2)
         @test mx ≈ Pioran.predict_direct(fp.f.f.kernel, tx, fp.f.x, fp.y, yerr .^ 2)
     end
     @testset "Scalable GP check cov" begin
         c = cov(fp)
         cx = cov(fp, tx)
-        @test isfinite(c)
+        @test all(isfinite.(c))
         @test isposdef(c)
         @test c ≈ Pioran.predict_cov(fp.f.f.kernel, fp.f.x, fp.f.x, yerr .^ 2)
         @test isposdef(cx)
@@ -168,9 +168,9 @@ function test_scalableGP_posterior()
     return @testset "Scalable GP check std" begin
         s = std(fp)
         sx = std(fp, tx)
-        @test isfinite(s)
+        @test all(isfinite.(s))
         @test s ≈ sqrt.(diag(Pioran.predict_cov(fp.f.f.kernel, fp.f.x, fp.f.x, yerr .^ 2)))
-        @test isfinite(sx)
+        @test all(isfinite.(sx))
         @test sx ≈ sqrt.(diag(Pioran.predict_cov(fp.f.f.kernel, tx, fp.f.x, yerr .^ 2)))
     end
 end
@@ -198,8 +198,8 @@ function test_scalableGP_posterior_sample()
     sx = rand(fp, tx)
     sx10 = rand(fp, tx, 10)
     return @testset "Rand posterior GP" begin
-        @test isfinite(s)
-        @test isfinite(s10)
+        @test all(isfinite.(s))
+        @test all(isfinite.(s10))
         @test size(s10) == (length(t), 10)
         @test size(sx) == (length(tx), 1)
         @test size(sx10) == (length(tx), 10)
@@ -225,8 +225,8 @@ function test_scalableGP_sample()
     s = rand(fx)
     sx = rand(fx, tx)
     return @testset "Rand posterior GP" begin
-        @test isfinite(s)
-        @test isfinite(sx)
+        @test all(isfinite.(s))
+        @test all(isfinite.(sx))
     end
 
 end
