@@ -73,7 +73,7 @@ function loglikelihood(y, t, σ, params)
     𝓟 = model(α₁, f₁, α₂)
 
     # Approximation of the PSD to form a covariance function
-    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function = basis_function)
+    𝓡 = approx(𝓟, f_min, f_max, n_components, variance, basis_function = basis_function)
 
     # Build the GP
     f = ScalableGP(μ, 𝓡)
@@ -99,7 +99,7 @@ paramnames = ["α₁", "f₁", "α₂", "variance", "ν", "μ", "c"]
 if MPI.Comm_rank(comm) == 0 && prior_checks
     unif = rand(rng, 7, 3000) # uniform samples from the unit hypercube
     priors = mapreduce(permutedims, hcat, [prior_transform(unif[:, i]) for i in 1:3000]') # transform the uniform samples to the prior
-    run_diagnostics(priors[1:3, :], priors[4, :], f0, fM, model, f_min, f_max, path = plot_path, basis_function = basis_function, n_components = n_components)
+    run_diagnostics(priors[1:3, :], priors[4, :], model, f_min, f_max, path = plot_path, basis_function = basis_function, n_components = n_components)
 end
 
 println("Hello world, I am $(MPI.Comm_rank(comm)) of $(MPI.Comm_size(comm))")
@@ -112,5 +112,5 @@ sampler.plot()
 
 if MPI.Comm_rank(comm) == 0 && posterior_checks
     samples = readdlm(dir * "/chains/equal_weighted_post.txt", skipstart = 1)
-    run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, true; path = plot_path, basis_function = basis_function, n_components = n_components)
+    run_posterior_predict_checks(samples, paramnames, t, y, yerr,model, true; path = plot_path, basis_function = basis_function, n_components = n_components)
 end
