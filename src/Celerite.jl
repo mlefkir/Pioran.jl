@@ -26,7 +26,7 @@ end
 
 # Define the kernel functions for the Celerite model
 KernelFunctions.kappa(R::Celerite, τ::Real) = Celerite_covariance(τ, R.a, R.b, R.c, R.d)
-KernelFunctions.metric(R::Celerite) = Euclidean()
+KernelFunctions.metric(R::Celerite) = KernelFunctions.Euclidean()
 KernelFunctions.ScaledKernel(R::Celerite, number::Real = 1.0) = Celerite(number * R.a, number * R.b, R.c, R.d)
 
 # Get the celerite coefficients of a Celerite covariance function
@@ -51,11 +51,11 @@ function Celerite_psd(f, a, b, c, d)
 end
 
 
-""" calculate(f, C::Celerite)
+""" evaluate(f, C::Celerite)
 
-    Calculate the power spectral density at frequency f
+    evaluate the power spectral density at frequency f
 """
-function calculate(C::Celerite, f)
+function evaluate(C::Celerite, f)
     return Celerite_psd.(f, Ref(C.a), Ref(C.b), Ref(C.c), Ref(C.d))
 end
 

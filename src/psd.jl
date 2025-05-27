@@ -140,7 +140,7 @@ end
 Return the approximated PSD. This is essentially to check that the model and the approximation are consistent.
 
 # Arguments
-- `f::AbstractVector{<:Real}`: the frequencies at which to calculate the PSD
+- `f::AbstractVector{<:Real}`: the frequencies at which to evaluate the PSD
 - `psd_model::PowerSpectralDensity`: model of the PSD
 - `f0::Real`: the lowest frequency
 - `fM::Real`: the highest frequency

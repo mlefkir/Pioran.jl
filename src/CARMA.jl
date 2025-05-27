@@ -40,7 +40,7 @@ CARMA(p::Int64, q::Int64, rα, β) = CARMA(p, q, rα, β, 1.0)
 
 # Define the kernel functions for the CARMA model
 KernelFunctions.kappa(R::CARMA, τ::Real) = CARMA_covariance(τ, R)
-KernelFunctions.metric(R::CARMA) = Euclidean()
+KernelFunctions.metric(R::CARMA) = KernelFunctions.Euclidean()
 KernelFunctions.ScaledKernel(R::CARMA, number::Real = 1.0) = CARMA(R.p, R.q, R.rα, R.β, R.σ² * number)
 
 """
@@ -137,11 +137,11 @@ function CARMA_celerite_coefs(p::Int64, rα::Vector{Trα}, β::Vector{Tβ}, σ²
 end
 
 """
-	calculate(model::CARMA, f)
+	evaluate(model::CARMA, f)
 
-Calculate the power spectral density of the CARMA model at frequency f.
+evaluate the power spectral density of the CARMA model at frequency f.
 """
-function calculate(model::CARMA, f)
+function evaluate(model::CARMA, f)
     num = zeros(length(f))
     den = zeros(length(f))
 

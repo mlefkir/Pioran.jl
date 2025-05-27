@@ -23,7 +23,7 @@ struct Exp <: SemiSeparable
 end
 
 KernelFunctions.kappa(R::Exp, τ::Real) = Exp_covariance(τ, R.A, R.α)
-KernelFunctions.metric(R::Exp) = Euclidean()
+KernelFunctions.metric(R::Exp) = KernelFunctions.Euclidean()
 KernelFunctions.ScaledKernel(R::Exp, number::Real = 1.0) = Exp(number * R.A, R.α)
 
 function celerite_coefs(covariance::Exp)
@@ -44,12 +44,12 @@ function Exp_psd(f, A, α)
     return A * 2 * α ./ (α^2 .+ 4π^2 * f .^ 2)
 end
 
-""" calculate(C::Exp, f)
+""" evaluate(R::Exp, f)
 
     This is the right formula but it disagrees with the Celerite implementation...
 
-    Calculate the power spectral density at frequency f
+    Evaluate the power spectral density at frequency f
 """
-function calculate(R::Exp, f)
+function evaluate(R::Exp, f)
     return Exp_psd.(f, Ref(R.A), Ref(R.α))
 end
