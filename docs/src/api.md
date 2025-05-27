@@ -11,12 +11,25 @@ Pages = ["psd.jl"]
 Private = false
 Order   = [:type, :function]
 ```
+```@autodocs
+Modules = [Tonari]
+Pages = ["psd.jl"]
+Private = false
+Order   = [:type,]
+```
 
 ### Helper functions
 ```@autodocs
 Modules = [Pioran]
 Pages = ["psd.jl"]
 Public = false
+Order   = [:function]
+```
+
+```@autodocs
+Modules = [Tonari]
+Pages = ["psd.jl"]
+Private = false
 Order   = [:function]
 ```
 ## Covariance functions

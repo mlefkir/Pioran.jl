@@ -1,100 +1,48 @@
 using Pioran: SHO, Exp, Celerite
 
-abstract type Model end
-abstract type PowerSpectralDensity <: Model end
-abstract type BendingPowerLaw <: PowerSpectralDensity end
+"""
+     convert_feature(psd_feature)
 
-@doc raw"""
-     PowerLaw(α)
+Convert a PSD feature to a Celerite covariance function
+Only QPO is implemented
 
-Power law model for the power spectral density
+# Arguments
+- `psd_feature::PowerSpectralDensity`: the PSD feature
 
-- `α`: the power law index
+# Return
+- `covariance::SemiSeparable`: the covariance function
+"""
+function convert_feature(psd_feature::PowerSpectralDensity)
+    if psd_feature isa QPO
+        Δ = sqrt(4 * psd_feature.Q^2 - 1)
 
-```math
-\mathcal{P}(f) =  f^{-α}
-```
+        a = psd_feature.S₀ * psd_feature.f₀ * psd_feature.Q * 2π
+        b = a / Δ
+        c = 2π * psd_feature.f₀ / psd_feature.Q / 2
+        d = 2π * psd_feature.f₀ * Δ / 2 / psd_feature.Q
+        return [a, b, c, d]
+    else
+        error("Feature $(typeof(psd_feature)) not implemented")
+    end
+end
 
 """
-struct PowerLaw{T <: Real} <: PowerSpectralDensity
-    α::T
-end
+     get_covariance_from_psd(psd_features)
 
-function calculate(f, psd::PowerLaw)
-    return (f)^(-psd.α)
-end
-
-@doc raw"""
-     SingleBendingPowerLaw(α₁, f₁, α₂)
-
-Single bending power law model for the power spectral density
-
-- `α₁`: the first power law index
-- `f₁`: the first bend frequency
-- `α₂`: the second power law index
-
-```math
-\mathcal{P}(f) =  \frac{(f/f₁)^{-α₁}}{1 + (f / f₁)^{α₂ - α₁}}
-```
-
+Get the covariance function from the PSD features
 """
-struct SingleBendingPowerLaw{T <: Real} <: BendingPowerLaw
-    α₁::T
-    f₁::T
-    α₂::T
+function get_covariance_from_psd(psd_features)
+    if psd_features isa Vector{<:PowerSpectralDensity}
+        cov = convert_feature(psd_features[1])
+        for i in 2:length(psd_features)
+            cov = hcat(cov, convert_feature(psd_features[i]))
+        end
+        return cov
+    else
+        return convert_feature(psd_features)
+    end
 end
 
-@doc raw"""
-     DoubleBendingPowerLaw(α₁, f₁, α₂, f₂, α₃)
-
-Double bending power law model for the power spectral density
-
-- `α₁`: the first power law index
-- `f₁`: the first bend frequency
-- `α₂`: the second power law index
-- `f₂`: the second bend frequency
-- `α₃`: the third power law index
-
-```math
-\mathcal{P}(f) =  \frac{(f/f₁)^{-α₁}}{1 + (f / f₁)^{α₂ - α₁}}\frac{1}{1 + (f / f₂)^{α₃ - α₂}}
-```
-"""
-struct DoubleBendingPowerLaw{T <: Real} <: BendingPowerLaw
-    α₁::T
-    f₁::T
-    α₂::T
-    f₂::T
-    α₃::T
-end
-
-struct TripleBendingPowerLaw{T <: Real} <: BendingPowerLaw
-    α₁::T
-    f₁::T
-    α₂::T
-    f₂::T
-    α₃::T
-    f₃::T
-    α₄::T
-end
-
-""" calculate(f, psd::PowerSpectralDensity)
-
-    Calculate the power spectral density at frequency f
-"""
-function calculate(f, psd::DoubleBendingPowerLaw)
-    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / (psd.f₂))^(psd.α₃ - psd.α₂))
-
-end
-
-function calculate(f, psd::SingleBendingPowerLaw)
-    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁))
-end
-
-function calculate(f, psd::TripleBendingPowerLaw)
-    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / psd.f₂)^(psd.α₃ - psd.α₂)) / (1 + (f / psd.f₃)^(psd.α₄ - psd.α₃))
-end
-
-(psd::PowerSpectralDensity)(f) = calculate.(f, Ref(psd))
 
 """
      get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points::AbstractVector{<:Real})
@@ -102,8 +50,8 @@ end
 Get the PSD normalised at the lowest frequency
 """
 function get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points::AbstractVector{<:Real})
-    psd_zero = calculate(spectral_points[1], psd_model)
-    psd_normalised = calculate.(spectral_points, Ref(psd_model)) / psd_zero
+    psd_zero = psd_model(spectral_points[1])
+    psd_normalised = psd_model(spectral_points) / psd_zero
     return psd_normalised
 end
 

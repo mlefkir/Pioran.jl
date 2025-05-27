@@ -44,12 +44,12 @@ function Exp_psd(f, A, α)
     return A * 2 * α ./ (α^2 .+ 4π^2 * f .^ 2)
 end
 
-""" calculate(f, C::Exp)
+""" calculate(C::Exp, f)
 
     This is the right formula but it disagrees with the Celerite implementation...
 
     Calculate the power spectral density at frequency f
 """
-function calculate(f, R::Exp)
+function calculate(R::Exp, f)
     return Exp_psd.(f, Ref(R.A), Ref(R.α))
 end

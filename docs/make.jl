@@ -2,6 +2,7 @@ push!(LOAD_PATH, "../src/")
 
 using Documenter, Pioran
 using DocumenterCitations
+using Tonari
 
 ## Add a bibliography to the documentation
 bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"), style = :authoryear)
@@ -10,6 +11,7 @@ BASIC_PAGES = ["explanation.md", "modelling.md", "simulations.md", "timeseries.m
 ADVANCED_PAGES = ["turing.md", "ultranest.md"]
 
 makedocs(
+    # modules = [Tonari],
     sitename = "Pioran.jl",
     pages = [
         "Home" => "index.md",
