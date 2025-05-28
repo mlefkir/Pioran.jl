@@ -248,7 +248,7 @@ Run the posterior predictive checks for the model and the approximation of the P
 - `t::Array{Float64, 1}` : The time series
 - `y::Array{Float64, 1}` : The values of the time series
 - `yerr::Array{Float64, 1}` : The errors of the time series
-- `model::Function` : The model
+- `model::Function` : The model or a string representing the model
 - `with_log_transform::Bool` : If true, the flux is log-transformed
 - `S_low::Float64=20.0` : the scaling factor for the appoximation at low frequencies
 - `S_high::Float64=20.0` : the scaling factor for the appoximation at high frequencies
