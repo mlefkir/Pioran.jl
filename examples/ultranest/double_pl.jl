@@ -35,11 +35,14 @@ filename = ARGS[1]
 fname = replace(split(filename, "/")[end], ".txt" => "_double")
 dir = "inference/" * fname
 plot_path = dir * "/plots/"
+if !ispath(dir)
+    mkpath(dir)
+end
 
 # Load the data and extract a subset for the analysis
 A = readdlm(filename, comments = true, comment_char = '#')
 t_all, y_all, yerr_all = A[:, 1], A[:, 2], A[:, 3]
-t, y, yerr, x̄, va = extract_subset(rng, fname, t_all, y_all, yerr_all);
+t, y, yerr, x̄, va = extract_subset(rng, dir * "/" * fname, t_all, y_all, yerr_all);
 
 # Frequency range for the approx and the prior
 f_min, f_max = 1 / (t[end] - t[1]), 1 / minimum(diff(t)) / 2
@@ -72,7 +75,7 @@ function loglikelihood(y, t, σ, params)
     𝓟 = model(α₁, f₁, α₂, f₂, α₃)
 
     # Approximation of the PSD to form a covariance function
-    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function = basis_function)
+    𝓡 = approx(𝓟, f_min, f_max, n_components, variance, basis_function = basis_function)
 
     # Build the GP
     f = ScalableGP(μ, 𝓡)
@@ -100,7 +103,7 @@ paramnames = ["α₁", "f₁", "α₂", "f₂", "α₃", "variance", "ν", "μ",
 if MPI.Comm_rank(comm) == 0 && prior_checks
     unif = rand(rng, 9, 3000) # uniform samples from the unit hypercube
     priors = mapreduce(permutedims, hcat, [prior_transform(unif[:, i]) for i in 1:3000]') # transform the uniform samples to the prior
-    run_diagnostics(priors[1:5, :], priors[6, :], f0, fM, model, f_min, f_max, path = plot_path, basis_function = basis_function, n_components = n_components)
+    run_diagnostics(priors[1:5, :], priors[6, :], f_min, f_max, model, path = plot_path, basis_function = basis_function, n_components = n_components)
 end
 
 println("Hello there! I am process $(MPI.Comm_rank(comm)) of $(MPI.Comm_size(comm))")
@@ -113,5 +116,5 @@ sampler.plot()
 
 if MPI.Comm_rank(comm) == 0 && posterior_checks
     samples = readdlm(dir * "/chains/equal_weighted_post.txt", skipstart = 1)
-    run_posterior_predict_checks(samples, paramnames, t, y, yerr, f0, fM, model, true; path = plot_path, basis_function = basis_function, n_components = n_components)
+    run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, true; path = plot_path, basis_function = basis_function, n_components = n_components)
 end

@@ -128,11 +128,11 @@ function celerite_coefs(covariance::SumOfSemiSeparable)
 end
 
 # Define the kernel functions for the SumOfSemiSeparable model
-KernelFunctions.metric(R::SumOfSemiSeparable) = Euclidean()
+KernelFunctions.metric(R::SumOfSemiSeparable) = KernelFunctions.Euclidean()
 
 ## For the SumOfCelerite model
 # Define the kernel functions for the SumOfCelerite model
-KernelFunctions.metric(R::SumOfTerms) = Euclidean()
+KernelFunctions.metric(R::SumOfTerms) = KernelFunctions.Euclidean()
 
 # Define the kernel functions for the SumOfCelerite model
 function KernelFunctions.kappa(R::SumOfTerms, τ::Real)

@@ -1,7 +1,3 @@
-using CairoMakie
-using VectorizedStatistics
-using LombScargle
-
 function get_theme()
     tw = 1.85
     ts = 10
@@ -200,7 +196,7 @@ function sample_approx_model(samples, norm_samples, f0, fM, model; n_frequencies
     P = size(samples, 2)
     f = collect(10 .^ range(log10(f0), log10(fM), n_frequencies))
 
-    psd = [Pioran.calculate.(f, Ref(model(samples[:, k]...))) for k in 1:P]
+    psd = [model(samples[:, k]...)(f) for k in 1:P]
     psd = mapreduce(permutedims, vcat, psd)'
     psd ./= psd[1, :]'
     psd .*= norm_samples'
@@ -879,7 +875,7 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t
     median_noise_level = 2 * median_ν * median_sq_err * median_dt
 
     P = size(samples_norm, 1)
-    psd_samples = [Pioran.calculate(f, CARMA(p, q, convert.(Complex, samples_rα[i, :]), samples_β[i, :], samples_norm[i])) for i in 1:P]
+    psd_samples = [Pioran.evaluate(CARMA(p, q, convert.(Complex, samples_rα[i, :]), samples_β[i, :], samples_norm[i]), f) for i in 1:P]
     psd_samples = mapreduce(permutedims, vcat, psd_samples)
 
     psd_quantiles = vquantile!.(Ref(psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)

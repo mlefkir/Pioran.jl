@@ -1,175 +1,9 @@
 using Pioran: SHO, Exp, Celerite
 
-abstract type Model end
-abstract type PowerSpectralDensity <: Model end
-abstract type BendingPowerLaw <: PowerSpectralDensity end
-
-@doc raw"""
-     PowerLaw(α)
-
-Power law model for the power spectral density
-
-- `α`: the power law index
-
-```math
-\mathcal{P}(f) =  f^{-α}
-```
-
-"""
-struct PowerLaw{T <: Real} <: PowerSpectralDensity
-    α::T
-end
-
-function calculate(f, psd::PowerLaw)
-    return (f)^(-psd.α)
-end
-
-@doc raw"""
-     SingleBendingPowerLaw(α₁, f₁, α₂)
-
-Single bending power law model for the power spectral density
-
-- `α₁`: the first power law index
-- `f₁`: the first bend frequency
-- `α₂`: the second power law index
-
-```math
-\mathcal{P}(f) =  \frac{(f/f₁)^{-α₁}}{1 + (f / f₁)^{α₂ - α₁}}
-```
-
-"""
-struct SingleBendingPowerLaw{T <: Real} <: BendingPowerLaw
-    α₁::T
-    f₁::T
-    α₂::T
-end
-
-@doc raw"""
-     DoubleBendingPowerLaw(α₁, f₁, α₂, f₂, α₃)
-
-Double bending power law model for the power spectral density
-
-- `α₁`: the first power law index
-- `f₁`: the first bend frequency
-- `α₂`: the second power law index
-- `f₂`: the second bend frequency
-- `α₃`: the third power law index
-
-```math
-\mathcal{P}(f) =  \frac{(f/f₁)^{-α₁}}{1 + (f / f₁)^{α₂ - α₁}}\frac{1}{1 + (f / f₂)^{α₃ - α₂}}
-```
-"""
-struct DoubleBendingPowerLaw{T <: Real} <: BendingPowerLaw
-    α₁::T
-    f₁::T
-    α₂::T
-    f₂::T
-    α₃::T
-end
-
-struct TripleBendingPowerLaw{T <: Real} <: BendingPowerLaw
-    α₁::T
-    f₁::T
-    α₂::T
-    f₂::T
-    α₃::T
-    f₃::T
-    α₄::T
-end
-
-""" calculate(f, psd::PowerSpectralDensity)
-
-    Calculate the power spectral density at frequency f
-"""
-function calculate(f, psd::DoubleBendingPowerLaw)
-    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / (psd.f₂))^(psd.α₃ - psd.α₂))
-
-end
-
-function calculate(f, psd::SingleBendingPowerLaw)
-    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁))
-end
-
-function calculate(f, psd::TripleBendingPowerLaw)
-    return (f / psd.f₁)^(-psd.α₁) / (1 + (f / psd.f₁)^(psd.α₂ - psd.α₁)) / (1 + (f / psd.f₂)^(psd.α₃ - psd.α₂)) / (1 + (f / psd.f₃)^(psd.α₄ - psd.α₃))
-end
-
-@doc raw"""
-	QPO(S₀, f₀,A Q)
-
-Lorentzian model for the power spectral density
-
-- `S₀`: the amplitude at the peak
-- `f₀`: the central frequency
-- `Q`: quality factor
-
-```math
-\mathcal{P}(f) =  \frac{A}{4\pi^2 (f - f₀)^2 + γ^2}
-```
-"""
-struct QPO{TS₀ <: Real, Tf₀ <: Real, TQ <: Real} <: PowerSpectralDensity
-    S₀::TS₀
-    f₀::Tf₀
-    Q::TQ
-
-end
-
-QPO(f₀::Tf₀, Q::TQ) where {Tf₀ <: Real, TQ <: Real} = QPO(1.0, f₀, Q)
-
-
-function calculate(f, psd::QPO)
-    return psd.S₀ * psd.f₀^4 ./ ((f .^ 2 .- psd.f₀ .^ 2) .^ 2 .+ f .^ 2 .* psd.f₀^2 / psd.Q^2)
-end
-
-struct SumOfPowerSpectralDensity{Tp <: Vector{<:PowerSpectralDensity}} <: PowerSpectralDensity
-    psd::Tp
-end
-
-
-function Base.:+(a::PowerSpectralDensity, b::PowerSpectralDensity)
-    return SumOfPowerSpectralDensity([a, b])
-end
-
-function Base.:+(a::PowerSpectralDensity, b::SumOfPowerSpectralDensity)
-    return SumOfPowerSpectralDensity([a; b.psd])
-end
-
-function Base.:+(a::SumOfPowerSpectralDensity, b::PowerSpectralDensity)
-    return SumOfPowerSpectralDensity([a.psd; b])
-end
-
-function calculate(f, model::SumOfPowerSpectralDensity)
-    return sum(p(f) for p in model.psd)
-end
-
-
-"""
-	 separate_psd(psd::PowerSpectralDensity)
-
-Separate the PSD into its BendingPowerLaw components and other components if it is a sum of PSDs
-"""
-function separate_psd(psd::PowerSpectralDensity)
-    if isa(psd, BendingPowerLaw)
-        return psd, nothing
-    elseif isa(psd, SumOfPowerSpectralDensity)
-        cont = isa.(psd.psd, BendingPowerLaw)
-        if length(psd.psd[cont]) < 2
-            psd_continuum = psd.psd[cont][1]
-        else
-            psd_continuum = SumOfPowerSpectralDensity(psd.psd[cont])
-        end
-        psd_line = psd.psd[.!cont]
-
-        return psd_continuum, psd_line
-    else
-        return nothing, psd
-    end
-end
-
 """
      convert_feature(psd_feature)
 
-Convert a PSD feature to a covariance function
+Convert a PSD feature to a Celerite covariance function
 Only QPO is implemented
 
 # Arguments
@@ -182,10 +16,10 @@ function convert_feature(psd_feature::PowerSpectralDensity)
     if psd_feature isa QPO
         Δ = sqrt(4 * psd_feature.Q^2 - 1)
 
-        a = psd_feature.S₀ * psd_feature.f₀ * psd_feature.Q *2π
+        a = psd_feature.S₀ * psd_feature.f₀ * psd_feature.Q * 2π
         b = a / Δ
-        c = 2π*psd_feature.f₀ / psd_feature.Q / 2
-        d = 2π*psd_feature.f₀ * Δ / 2 / psd_feature.Q
+        c = 2π * psd_feature.f₀ / psd_feature.Q / 2
+        d = 2π * psd_feature.f₀ * Δ / 2 / psd_feature.Q
         return [a, b, c, d]
     else
         error("Feature $(typeof(psd_feature)) not implemented")
@@ -209,7 +43,6 @@ function get_covariance_from_psd(psd_features)
     end
 end
 
-(psd::PowerSpectralDensity)(f) = calculate.(f, Ref(psd))
 
 """
      get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points::AbstractVector{<:Real})
@@ -217,8 +50,8 @@ end
 Get the PSD normalised at the lowest frequency
 """
 function get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points::AbstractVector{<:Real})
-    psd_zero = calculate(spectral_points[1], psd_model)
-    psd_normalised = calculate.(spectral_points, Ref(psd_model)) / psd_zero
+    psd_zero = psd_model(spectral_points[1])
+    psd_normalised = psd_model(spectral_points) / psd_zero
     return psd_normalised
 end
 
@@ -307,7 +140,7 @@ end
 Return the approximated PSD. This is essentially to check that the model and the approximation are consistent.
 
 # Arguments
-- `f::AbstractVector{<:Real}`: the frequencies at which to calculate the PSD
+- `f::AbstractVector{<:Real}`: the frequencies at which to evaluate the PSD
 - `psd_model::PowerSpectralDensity`: model of the PSD
 - `f0::Real`: the lowest frequency
 - `fM::Real`: the highest frequency

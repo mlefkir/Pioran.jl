@@ -1,6 +1,4 @@
 using Pioran: SumOfSemiSeparable
-using LinearAlgebra
-using LoopVectorization
 
 """
      init_semi_separable(a, b, c, d, τ, σ2)

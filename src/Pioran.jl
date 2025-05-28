@@ -3,25 +3,26 @@ module Pioran
 using Random
 using LinearAlgebra
 using KernelFunctions
-using Distances
 using AbstractGPs
-using LinearAlgebra
 using Distributions
-using Random
-using Turing
+using Bijectors
 using DelimitedFiles
 using StatsBase
 using ProgressMeter
 using Polynomials
 using StructArrays
 using LoopVectorization
+using Tonari
+using CairoMakie
+using VectorizedStatistics
+using LombScargle
 
 export SHO, Celerite, Exp, CARMA
-export SingleBendingPowerLaw, DoubleBendingPowerLaw, DoubleBendingPowerLaw_Bis, approx, TripleBendingPowerLaw, PowerLaw
+export SingleBendingPowerLaw, DoubleBendingPowerLaw, PowerLaw, approx
+export get_covariance_from_psd, evaluate
 export ScalableGP, posterior, log_likelihood, mean, cov, std
-export quad2roots, roots2coeffs
-export run_diagnostics, run_posterior_predict_checks, extract_subset
-export sample_approx_model
+export quad2roots, roots2coeffs, run_diagnostics, run_posterior_predict_checks
+export extract_subset, sample_approx_model
 export TwoUniformDependent, TwoLogUniformDependent, ThreeUniformDependent
 
 include("acvf.jl")
