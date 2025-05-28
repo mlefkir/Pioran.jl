@@ -49,4 +49,4 @@ Python implementations of the `celerite` algorithm are available in [celerite2](
 
 This method uses the quasi-separable structure of the covariance functions [`Celerite`](@ref), [`SHO`](@ref) and [`Exp`](@ref) to compute the log-likelihood in a linear scaling with the number of datapoints as shown in the following benchmarks.
 
-![benchmark_likelihood](./figures/Likelihood_benchmarks_bis.png)
+![benchmark_likelihood](./figures/celerite_likelihood_likelihood_benchmarks_main.png)
