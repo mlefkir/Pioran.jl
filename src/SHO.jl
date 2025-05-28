@@ -24,7 +24,7 @@ end
 
 # Define the kernel functions for the SHO model
 KernelFunctions.kappa(R::SHO, τ::Real) = SHO_covariance(τ, R.A, R.ω₀, R.Q)
-KernelFunctions.metric(R::SHO) = Euclidean()
+KernelFunctions.metric(R::SHO) = KernelFunctions.Euclidean()
 KernelFunctions.ScaledKernel(R::SHO, number::Real = 1.0) = SHO(number * R.A, R.ω₀, R.Q)
 
 # Get the celerite coefficients of a SHO covariance function

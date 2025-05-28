@@ -1,4 +1,3 @@
-
 # COV_EXCL_START
 @doc raw"""
     TwoUniformDependent(a, b, c, ϵ)
@@ -16,7 +15,7 @@ This means that the lower bound of the second distribution is dependent on the v
 See the following issues for more details: [[1]](https://github.com/TuringLang/Turing.jl/issues/1558),[[2]](https://github.com/TuringLang/Turing.jl/issues/1708),[[3]](https://github.com/TuringLang/Turing.jl/issues/1270).
 
 # Example
-```jldoctest
+#```jldoctest
 julia> using Pioran, Distributions
 julia> d = TwoUniformDependent(0, 1, 2)
 TwoUniformDependent(0.0, 1.0, 2.0)
@@ -25,7 +24,7 @@ julia> rand(d)
 2-element Array{Float64,1}:
  0.123
  1.234
-```
+#```
 """
 struct TwoUniformDependent <: ContinuousMultivariateDistribution
     a::Float64

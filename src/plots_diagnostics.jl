@@ -1,7 +1,3 @@
-using CairoMakie
-using VectorizedStatistics
-using LombScargle
-
 function get_theme()
     tw = 1.85
     ts = 10
@@ -200,7 +196,7 @@ function sample_approx_model(samples, norm_samples, f0, fM, model; n_frequencies
     P = size(samples, 2)
     f = collect(10 .^ range(log10(f0), log10(fM), n_frequencies))
 
-    psd = [Pioran.calculate.(f, Ref(model(samples[:, k]...))) for k in 1:P]
+    psd = [model(samples[:, k]...)(f) for k in 1:P]
     psd = mapreduce(permutedims, vcat, psd)'
     psd ./= psd[1, :]'
     psd .*= norm_samples'
@@ -265,7 +261,7 @@ Run the posterior predictive checks for the model and the approximation of the P
 - `plot_f_P::Bool=false` : If true, the plots are made in terms of f * PSD
 - `n_components::Int=20` : The number of components to use for the approximation of the PSD
 """
-function run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, is_integrated_power = true, plots = "all", n_samples = 100, path = "", basis_function = "SHO", n_frequencies = 1000, plot_f_P = false, n_components = 20,save_samples=false)
+function run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, is_integrated_power = true, plots = "all", n_samples = 100, path = "", basis_function = "SHO", n_frequencies = 1000, plot_f_P = false, n_components = 20, save_samples = false)
     println("Running posterior predictive checks...")
     samples_𝓟, samples_norm, samples_ν, samples_μ, samples_c = separate_samples(samples, paramnames, with_log_transform)
     figs = []
@@ -287,7 +283,7 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, wi
             plot_f_P = plot_f_P,
             n_components = n_components,
             n_frequencies = n_frequencies,
-            with_log_transform = with_log_transform,save_samples=save_samples
+            with_log_transform = with_log_transform, save_samples = save_samples
         )
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
         fig2 = plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, path = path, S_low = S_low, S_high = S_high, plot_f_P = plot_f_P, basis_function = basis_function, is_integrated_power = is_integrated_power, n_components = n_components, n_frequencies = n_frequencies)
@@ -315,7 +311,7 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, wi
                 plot_f_P = plot_f_P,
                 n_components = n_components,
                 n_frequencies = n_frequencies,
-                with_log_transform = with_log_transform,save_samples=save_samples
+                with_log_transform = with_log_transform, save_samples = save_samples
             )
             push!(figs, fig)
         end
@@ -879,7 +875,7 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t
     median_noise_level = 2 * median_ν * median_sq_err * median_dt
 
     P = size(samples_norm, 1)
-    psd_samples = [Pioran.calculate(f, CARMA(p, q, convert.(Complex, samples_rα[i, :]), samples_β[i, :], samples_norm[i])) for i in 1:P]
+    psd_samples = [Pioran.evaluate(CARMA(p, q, convert.(Complex, samples_rα[i, :]), samples_β[i, :], samples_norm[i]), f) for i in 1:P]
     psd_samples = mapreduce(permutedims, vcat, psd_samples)
 
     psd_quantiles = vquantile!.(Ref(psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)

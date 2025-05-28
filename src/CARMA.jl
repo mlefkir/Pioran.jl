@@ -40,7 +40,7 @@ CARMA(p::Int64, q::Int64, rα, β) = CARMA(p, q, rα, β, 1.0)
 
 # Define the kernel functions for the CARMA model
 KernelFunctions.kappa(R::CARMA, τ::Real) = CARMA_covariance(τ, R)
-KernelFunctions.metric(R::CARMA) = Euclidean()
+KernelFunctions.metric(R::CARMA) = KernelFunctions.Euclidean()
 KernelFunctions.ScaledKernel(R::CARMA, number::Real = 1.0) = CARMA(R.p, R.q, R.rα, R.β, R.σ² * number)
 
 """
@@ -137,11 +137,11 @@ function CARMA_celerite_coefs(p::Int64, rα::Vector{Trα}, β::Vector{Tβ}, σ²
 end
 
 """
-	calculate(f, model::CARMA)
+	evaluate(model::CARMA, f)
 
-Calculate the power spectral density of the CARMA model at frequency f.
+evaluate the power spectral density of the CARMA model at frequency f.
 """
-function calculate(f, model::CARMA)
+function evaluate(model::CARMA, f)
     num = zeros(length(f))
     den = zeros(length(f))
 
@@ -287,27 +287,27 @@ function CARMA_normalisation(covariance::CARMA)
 end
 
 @doc raw"""
-	sample_quad(p, q, rng, f_min, f_max)
+	sample_quad(p::Int64, q::Int64, rng::AbstractRNG, f_min::Float64, f_max::Float64)
 
 
-	Sample the quadratic coefficients of the CARMA model to ensure that the roots are complex conjugate pairs and that:
-	- The roots of the autoregressive polynomial are within the range [f_min, f_max]
-	- The roots of the moving average polynomial are within the range [f_min, f_max]
-	- The roots should be ordered in increasing order of magnitude.
+Sample the quadratic coefficients of the CARMA model to ensure that the roots are complex conjugate pairs and that:
+- The roots of the autoregressive polynomial are within the range [f_min, f_max]
+- The roots of the moving average polynomial are within the range [f_min, f_max]
+- The roots should be ordered in increasing order of magnitude.
 
 
-	# Arguments
-	- `p::Int64`: the order of the autoregressive polynomial
-	- `q::Int64`: the order of the moving average polynomial
-	- `rng::AbstractRNG`: the random number generator
-	- `f_min`: the minimum value of the roots
-	- `f_max`: the maximum value of the roots
+# Arguments
+- `p::Int64`: the order of the autoregressive polynomial
+- `q::Int64`: the order of the moving average polynomial
+- `rng::AbstractRNG`: the random number generator
+- `f_min`: the minimum value of the roots
+- `f_max`: the maximum value of the roots
 
-	# Returns
-	- `qa::Vector{Real}`: the quadratic coefficients of the autoregressive polynomial
-	- `qb::Vector{Real}`: the quadratic coefficients of the moving average polynomial
+# Returns
+- `qa::Vector{{Float64}}`: the quadratic coefficients of the autoregressive polynomial
+- `qb::Vector{{Float64}}`: the quadratic coefficients of the moving average polynomial
 """
-function sample_quad(p::Int64, q::Int64, rng::AbstractRNG, f_min, f_max)
+function sample_quad(p::Int64, q::Int64, rng::AbstractRNG, f_min::Float64, f_max::Float64)
     buff = 0.0
     f0_start = 0.0
     f0_lower, f0_upper = f_min, f_max
@@ -315,8 +315,8 @@ function sample_quad(p::Int64, q::Int64, rng::AbstractRNG, f_min, f_max)
     γ_dist = LogUniform(2 * f_min, 2 * f_max)
     f0_dist = LogUniform(f0_lower, f0_upper)
     a_3 = LogUniform(f_min, f_max)
-    qa = Vector(undef, p)
-    qb = Vector(undef, q)
+    qa = Vector{Float64}(undef, p)
+    qb = Vector{Float64}(undef, q)
 
     if p % 2 == 0  # all roots are complex conjugates
         # we first fill the quadratic coefficients with pair indices
