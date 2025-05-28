@@ -16,7 +16,7 @@ using Pkg; Pkg.add("Pioran")
 
 ## Documentation
 
-See the documentation at [https://www.mehdylefkir.fr/Pioran.jl](https://www.mehdylefkir.fr/Pioran.jl).
+See the documentation at [https://mlefkir.github.io/Pioran.jl/stable/](https://mlefkir.github.io/Pioran.jl/stable/).
 
 ## Examples
 
