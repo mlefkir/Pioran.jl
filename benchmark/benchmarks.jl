@@ -13,9 +13,9 @@ SUITE["pioran_likelihood"] = BenchmarkGroup([])
 SUITE["pioran_likelihood"]["SHO"] = BenchmarkGroup([])
 SUITE["pioran_likelihood"]["DRWCelerite"] = BenchmarkGroup([])
 
-n_samples = 2 .^ (5:6)#16)
-n_components = 2 .^ (1:2)#6)
-n_bases = [10]#, 20, 30, 40, 50]
+n_samples = 2 .^ (5:16)
+n_components = 2 .^ (1:6)
+n_bases = [10, 20, 30, 40, 50]
 
 basis_functions = ["SHO", "DRWCelerite"]
 
