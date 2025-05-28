@@ -14,7 +14,7 @@ f = ScalableGP(μ, 𝓡) # with mean μ
 ```
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-struct ScalableGP{Typef <: GP{<:AbstractGPs.ConstMean}, Tk <: SemiSeparable} <: AbstractGPs.AbstractGP
+struct ScalableGP{Typef <: GP{<:AbstractGPs.MeanFunction}, Tk <: SemiSeparable} <: AbstractGPs.AbstractGP
     f::Typef
     kernel::Tk
 end
@@ -23,9 +23,9 @@ end
 
 ScalableGP(f::GP) = ScalableGP(f, f.kernel)
 ScalableGP(kernel::SemiSeparable) = ScalableGP(GP(0.0, kernel), kernel)
-function ScalableGP(mean::Real, kernel::Tk) where {Tk <: SemiSeparable}
-    return ScalableGP(GP(mean, kernel), kernel)
-end
+ScalableGP(mean::Real, kernel::SemiSeparable) = ScalableGP(GP(mean, kernel), kernel)
+ScalableGP(mean::AbstractGPs.MeanFunction, kernel::SemiSeparable) = ScalableGP(GP(mean, kernel), kernel)
+
 const FiniteScalableGP = AbstractGPs.FiniteGP{<:ScalableGP}
 
 struct PosteriorGP{Typef <: FiniteScalableGP, Ty <: AbstractVecOrMat{<:Real}} <: AbstractGPs.AbstractGP
@@ -120,12 +120,12 @@ AbstractGPs.rand(fp::PosteriorGP, τ::AbstractVecOrMat{<:Real}) = AbstractGPs.ra
 
 function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP)
     σ2 = diag(f.Σy)
-    return simulate(rng, f.f.kernel, f.x, σ2) .+ f.f.f.mean.c
+    return simulate(rng, f.f.kernel, f.x, σ2) + mean_vector(f.f.f.mean, f.x)
 end
 
 function randScalableGP(rng::AbstractRNG, f::FiniteScalableGP, t::AbstractVecOrMat{<:Real})
     σ2 = zeros(length(t))
-    return simulate(rng, f.f.kernel, t, σ2) .+ f.f.f.mean.c
+    return simulate(rng, f.f.kernel, t, σ2) + mean_vector(f.f.f.mean, t)
 end
 
 """
@@ -148,6 +148,6 @@ Compute the log-likelihood of the data Y given the GP f.
 """
 function Distributions.logpdf(f::FiniteScalableGP, Y::AbstractVecOrMat{<:Real})
     σ2 = diag(f.Σy)
-    y = Y .- f.f.f.mean.c
+    y = Y .- mean_vector(f.f.f.mean, f.x)
     return log_likelihood(f.f.kernel, f.x, y, σ2)
 end

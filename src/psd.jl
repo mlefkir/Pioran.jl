@@ -217,7 +217,12 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
     fM = f_max * S_high
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function = basis_function)
 
-    psd_normalised = get_normalised_psd(psd_model, spectral_points)
+    # get the psd of the continuum
+    psd_continuum, psd_features = separate_psd(psd_model)
+
+    @assert !isnothing(psd_continuum) "The PSD model should contain at least one BendingPowerLaw component to be approximated"
+
+    psd_normalised = get_normalised_psd(psd_continuum, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
 
     integ = get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function, is_integrated_power)
@@ -229,9 +234,18 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
 
         a = amplitudes .* spectral_points * π / √2 # π / √2 was removed as it was also in the expression of var but it is now restored as we do not use the variance anymore
         c = √2 * π .* spectral_points
+        if isnothing(psd_features)
+            covariance = SumOfCelerite(a, a, c, c)
+        else
+            cov_features = Pioran.get_covariance_from_psd(psd_features)
 
-        covariance = SumOfCelerite(a, a, c, c)
-
+            covariance = SumOfCelerite(
+                [a; cov_features[1]],
+                [a; cov_features[2]],
+                [c; cov_features[3]],
+                [c; cov_features[4]]
+            )
+        end
     elseif basis_function == "DRWCelerite"
 
         # these are the coefficients of the celerite part of the DRWCelerite
@@ -245,8 +259,17 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
         bb = [b; zeros(n_components)]
         cc = [c; 2 * c]
         dd = [d; zeros(n_components)]
-        covariance = SumOfCelerite(aa, bb, cc, dd)
-
+        if isnothing(psd_features)
+            covariance = SumOfCelerite(aa, bb, cc, dd)
+        else
+            cov_features = Pioran.get_covariance_from_psd(psd_features)
+            covariance = SumOfCelerite(
+                [aa; cov_features[1]],
+                [bb; cov_features[2]],
+                [cc; cov_features[3]],
+                [dd; cov_features[4]]
+            )
+        end
     else
         error("Basis function" * basis_function * "not implemented")
     end

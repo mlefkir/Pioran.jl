@@ -18,8 +18,8 @@ using VectorizedStatistics
 using LombScargle
 
 export SHO, Celerite, Exp, CARMA
-export SingleBendingPowerLaw, DoubleBendingPowerLaw, PowerLaw, approx
-export get_covariance_from_psd, evaluate
+export SingleBendingPowerLaw, DoubleBendingPowerLaw, PowerLaw, Lorentzian, QPO, approx
+export get_covariance_from_psd, evaluate, CustomMean
 export ScalableGP, posterior, log_likelihood, mean, cov, std
 export quad2roots, roots2coeffs, run_diagnostics, run_posterior_predict_checks
 export extract_subset, sample_approx_model
