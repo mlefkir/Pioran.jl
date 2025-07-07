@@ -153,8 +153,8 @@ function test_scalableGP_posterior()
         m = mean(fp)
         mx = mean(fp, tx)
         @test all(isfinite.(m))
-        @test m ≈ Pioran.predict_direct(fp.f.f.kernel, fp.f.x, fp.f.x, fp.y, yerr .^ 2)
-        @test mx ≈ Pioran.predict_direct(fp.f.f.kernel, tx, fp.f.x, fp.y, yerr .^ 2)
+        @test m ≈ Pioran.predict_direct(fp.f.f.kernel, fp.f.x, fp.f.x, fp.y .- Pioran.mean_vector(fp.f.f.f.mean, fp.f.x), yerr .^ 2) .+ Pioran.mean_vector(fp.f.f.f.mean, fp.f.x)
+        @test mx ≈ Pioran.predict_direct(fp.f.f.kernel, tx, fp.f.x, fp.y .- Pioran.mean_vector(fp.f.f.f.mean, fp.f.x), yerr .^ 2) .+ Pioran.mean_vector(fp.f.f.f.mean, tx)
     end
     @testset "Scalable GP check cov" begin
         c = cov(fp)

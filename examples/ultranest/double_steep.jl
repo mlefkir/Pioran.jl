@@ -42,7 +42,7 @@ end
 # Load the data and extract a subset for the analysis
 A = readdlm(filename, comments = true, comment_char = '#')
 t_all, y_all, yerr_all = A[:, 1], A[:, 2], A[:, 3]
-t, y, yerr, x̄, va = extract_subset(rng,  dir * "/" * fname, t_all, y_all, yerr_all);
+t, y, yerr, x̄, va = extract_subset(rng, dir * "/" * fname, t_all, y_all, yerr_all);
 
 # Frequency range for the approx and the prior
 f_min, f_max = 1 / (t[end] - t[1]), 1 / minimum(diff(t)) / 2

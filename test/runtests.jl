@@ -12,4 +12,6 @@ using Test
     include("test_predict_celerite.jl")
     include("test_carma.jl")
     include("test_plots.jl")
+    include("test_mean.jl")
+
 end
