@@ -202,6 +202,89 @@ function test_approx_integral_DRWCelerite()
     end
 end
 
+
+function test_approx_cov_Lorentzian()
+    α₁_set = [0.2, 0.03, 0.1, 0.46, 0.1, 0.21, 0.74, 0.1, 0.03, 0.92]
+    f₁_set = [1.3e-2, 1.32e-1, 5.53e-2, 3.3, 0.342, 3.2e1, 1.3, 4.0e1, 1.0e-2, 0.5]
+    α₂_set = [3.2, 3.1, 2.3, 2.57, 3.6, 2.3, 2.1, 2.79, 3.3, 3.8]
+    f_min, f_max, J = 2.0e-3, 3.52e2, 25
+    variances = [1.32, 35.3, 242.2, 46.6, 0.3, 0.244, 9.64, 0.75, 0.193, 0.21]
+
+
+    return @testset "Single QPO SHO" begin
+        α₁, f₁, α₂ = α₁_set[1], f₁_set[1], α₂_set[1]
+        va = variances[1]
+        PS = SingleBendingPowerLaw(α₁, f₁, α₂) + QPO(2.0, 1.0e-2, 14.2)
+        Rapprox = Pioran.approx(PS, f_min, f_max, J, va, is_integrated_power = false)
+        @test length(Rapprox.cov) == J + 1
+        @test Rapprox isa Pioran.SumOfTerms
+        @test Rapprox isa Pioran.SumOfCelerite
+        @test all([Rapprox.cov[i] isa Pioran.Celerite for i in 1:J])
+    end
+end
+
+
+function test_approx_cov_2Lorentzian()
+    α₁_set = [0.2, 0.03, 0.1, 0.46, 0.1, 0.21, 0.74, 0.1, 0.03, 0.92]
+    f₁_set = [1.3e-2, 1.32e-1, 5.53e-2, 3.3, 0.342, 3.2e1, 1.3, 4.0e1, 1.0e-2, 0.5]
+    α₂_set = [3.2, 3.1, 2.3, 2.57, 3.6, 2.3, 2.1, 2.79, 3.3, 3.8]
+    f_min, f_max, J = 2.0e-3, 3.52e2, 25
+    variances = [1.32, 35.3, 242.2, 46.6, 0.3, 0.244, 9.64, 0.75, 0.193, 0.21]
+
+
+    return @testset "double QPO SHO" begin
+        α₁, f₁, α₂ = α₁_set[1], f₁_set[1], α₂_set[1]
+        va = variances[1]
+        PS = SingleBendingPowerLaw(α₁, f₁, α₂) + QPO(2.0, 1.0e-2, 14.2) + QPO(4.0, 1.0e-1, 4.2)
+        Rapprox = Pioran.approx(PS, f_min, f_max, J, va, is_integrated_power = false)
+        @test length(Rapprox.cov) == J + 2
+        @test Rapprox isa Pioran.SumOfTerms
+        @test Rapprox isa Pioran.SumOfCelerite
+        @test all([Rapprox.cov[i] isa Pioran.Celerite for i in 1:J])
+    end
+end
+
+
+function test_approx_cov_DRWCelerite_Lorentzian()
+    α₁_set = [0.2, 0.03, 0.1, 0.46, 0.1, 0.21, 0.74, 0.1, 0.03, 0.92]
+    f₁_set = [1.3e-2, 1.32e-1, 5.53e-2, 3.3, 0.342, 3.2e1, 1.3, 4.0e1, 1.0e-2, 0.5]
+    α₂_set = [4.2, 3.1, 4.3, 5.57, 4.6, 2.3, 5.1, 2.79, 4.3, 5.8]
+    f_min, f_max, J = 2.0e-3, 3.52e2, 25
+    variances = [1.32, 35.3, 242.2, 46.6, 0.3, 0.244, 9.64, 0.75, 0.193, 0.21]
+
+    return @testset "Single QPO DRWCelerite" begin
+        α₁, f₁, α₂ = α₁_set[1], f₁_set[1], α₂_set[1]
+        va = variances[1]
+        PS = SingleBendingPowerLaw(α₁, f₁, α₂) + QPO(1.4, 1.0e-2, 10.2)
+        Rapprox = Pioran.approx(PS, f_min, f_max, J, va, is_integrated_power = false, basis_function = "DRWCelerite")
+        @test Rapprox isa Pioran.SumOfCelerite
+        @test Rapprox isa Pioran.SumOfTerms
+        @test length(Rapprox.cov) == 2J + 1
+        @test all([Rapprox.cov[i] isa Pioran.Celerite for i in 1:2J])
+    end
+end
+
+
+function test_approx_cov_DRWCelerite_2Lorentzian()
+    α₁_set = [0.2, 0.03, 0.1, 0.46, 0.1, 0.21, 0.74, 0.1, 0.03, 0.92]
+    f₁_set = [1.3e-2, 1.32e-1, 5.53e-2, 3.3, 0.342, 3.2e1, 1.3, 4.0e1, 1.0e-2, 0.5]
+    α₂_set = [4.2, 3.1, 4.3, 5.57, 4.6, 2.3, 5.1, 2.79, 4.3, 5.8]
+    f_min, f_max, J = 2.0e-3, 3.52e2, 25
+    variances = [1.32, 35.3, 242.2, 46.6, 0.3, 0.244, 9.64, 0.75, 0.193, 0.21]
+
+    return @testset "Double QPO DRWCelerite" begin
+        α₁, f₁, α₂ = α₁_set[1], f₁_set[1], α₂_set[1]
+        va = variances[1]
+        PS = SingleBendingPowerLaw(α₁, f₁, α₂) + QPO(1.4, 1.0e-2, 10.2) + QPO(2.4, 5.0e-2, 12.2)
+        Rapprox = Pioran.approx(PS, f_min, f_max, J, va, is_integrated_power = false, basis_function = "DRWCelerite")
+        @test Rapprox isa Pioran.SumOfCelerite
+        @test Rapprox isa Pioran.SumOfTerms
+        @test length(Rapprox.cov) == 2J + 2
+        @test all([Rapprox.cov[i] isa Pioran.Celerite for i in 1:2J])
+    end
+end
+
+
 @testset "Power spectral density" begin
     test_SingleBendingPowerLaw()
     test_DoubleBendingPowerLaw()
@@ -215,4 +298,8 @@ end
     test_approx_cov_DRWCelerite()
     test_approx_integral()
     test_approx_integral_DRWCelerite()
+    test_approx_cov_Lorentzian()
+    test_approx_cov_2Lorentzian()
+    test_approx_cov_DRWCelerite_Lorentzian()
+    test_approx_cov_DRWCelerite_2Lorentzian()
 end

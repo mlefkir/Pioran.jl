@@ -240,10 +240,10 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
             cov_features = Pioran.get_covariance_from_psd(psd_features)
 
             covariance = SumOfCelerite(
-                [a; cov_features[1]],
-                [a; cov_features[2]],
-                [c; cov_features[3]],
-                [c; cov_features[4]]
+                [a; cov_features[1, :]],
+                [a; cov_features[2, :]],
+                [c; cov_features[3, :]],
+                [c; cov_features[4, :]]
             )
         end
     elseif basis_function == "DRWCelerite"
@@ -264,10 +264,10 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
         else
             cov_features = Pioran.get_covariance_from_psd(psd_features)
             covariance = SumOfCelerite(
-                [aa; cov_features[1]],
-                [bb; cov_features[2]],
-                [cc; cov_features[3]],
-                [dd; cov_features[4]]
+                [aa; cov_features[1, :]],
+                [bb; cov_features[2, :]],
+                [cc; cov_features[3, :]],
+                [dd; cov_features[4, :]]
             )
         end
     else
