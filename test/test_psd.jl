@@ -15,10 +15,10 @@ end
 function test_normalised_psd()
     PS = SingleBendingPowerLaw(0.3, 0.02, 2.93)
     f = 10 .^ range(-3, stop = 2, length = 1000)
-    @test PS(f) / PS(f[1]) == Pioran.get_normalised_psd(PS, f)
+    @test PS(f) / PS(f[1]) == Pioran.get_normalised_psd(PS, f)[1]
 
     DS = DoubleBendingPowerLaw(0.3, 0.02, 1.4, 10.2, 2.93)
-    return @test DS(f) / DS(f[1]) == Pioran.get_normalised_psd(DS, f)
+    return @test DS(f) / DS(f[1]) == Pioran.get_normalised_psd(DS, f)[1]
 end
 
 function test_build_approx_SHO()
