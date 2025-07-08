@@ -62,7 +62,7 @@ variance = var(y, corrected = true)
     𝓟 = SingleBendingPowerLaw(α₁, f₁, α₂)
 
     # Approximation of the PSD to form a covariance function
-    𝓡 = approx(𝓟, f_min,f_max, J, variance, basis_function = basis_function)
+    𝓡 = approx(𝓟, f_min, f_max, J, variance, basis_function = basis_function)
 
     # Build the GP
     f = ScalableGP(μ, 𝓡)
@@ -85,7 +85,7 @@ for N in n_samples
                 $c[1:$j],
                 $d[1:$j],
                 $t[1:$N],
-               $y[1:$N],
+                $y[1:$N],
                 $yerr[1:$N]
             )
         )

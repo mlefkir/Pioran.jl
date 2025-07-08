@@ -1,4 +1,4 @@
-using Pioran, Test
+using Pioran, Test, QuadGK
 
 function test_exp_covariance()
     α = 2.4
@@ -46,6 +46,14 @@ function test_Exp_celerite_coef()
     return @test Pioran.celerite_coefs(e) == [2.3, 0.0, 0.2, 0.0]
 end
 
+function test_integral_celerite()
+    a, b, c, d = [3.3, 0.2, 0.3, 2.2]
+    x1, x2 = 1.0e-2, 1.0e1
+    integ_num = quadgk(x -> Pioran.Celerite_psd(x, a, b, c, d), x1, x2, rtol = 1.0e-10)[1] * 2π
+    integ_ana = Pioran.integral_celerite(a, b, c, d, 2π * x2) - Pioran.integral_celerite(a, b, c, d, 2π * x1)
+    return @test integ_num ≈ integ_ana
+
+end
 
 @testset "test_covariance_functions" begin
     test_exp_covariance()
@@ -55,4 +63,5 @@ end
     test_celerite_coef()
     test_SHO_celerite_coef()
     test_Exp_celerite_coef()
+    test_integral_celerite()
 end

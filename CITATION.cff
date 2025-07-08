@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Lefkir
+    given-names: Mehdy
+    orcid: https://orcid.org/0000-0002-6972-2429
+title: "Pioran.jl"
+version: 1.0.0
+identifiers:
+  - type: doi
+    value: 10.1093/mnras/staf532
+date-released: 2025-07-08
+url: "https://github.com/mlefkir/Pioran.jl"

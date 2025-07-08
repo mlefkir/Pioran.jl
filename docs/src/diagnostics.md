@@ -28,7 +28,6 @@ pairplot(c)
 ```
 
 We can now use the function [`run_posterior_predict_checks`](@ref) to perform the diagnostics. This function calls several other functions to plot the graphical diagnostics.
-
 ```@example diagnostics
 f0, fM = 1 / (t[end] - t[1])/4.0, 1 / minimum(diff(t)) / 2 * 4.0
 basis_function = "SHO"
@@ -36,7 +35,49 @@ n_components = 20
 model = SingleBendingPowerLaw
 paramnames = data[1,:]
 array = data[2:end,:]
-figs = run_posterior_predict_checks(array, paramnames, t, y, yerr, model, true; S_low=20., S_high=20., path="", basis_function=basis_function, n_components=n_components, is_integrated_power=false)
+```
+
+This function requires a function `GP_model` to describe the GP model used and it requires the dictionary `paramnames_split` to split the parameters between the PSD model, the mean or the errors.
+
+```@example diagnostics
+function GP_model(t, y, σ, params, basis_function=basis_function, n_components=n_components, model=model)
+
+    T = (t[end] - t[1]) # duration of the time series
+    Δt = minimum(diff(t)) # min time separation
+
+    f_min, f_max = 1 / T, 1 / Δt / 2
+
+    α₁, f₁, α₂, variance, ν, μ, c = params
+
+    # Rescale the measurement variance
+    σ² = ν .* σ .^ 2  ./ (y.-c).^2
+
+    # Define power spectral density function
+    𝓟 = model(α₁, f₁, α₂)
+
+    # Approximation of the PSD to form a covariance function
+    𝓡 = approx(𝓟, f_min, f_max, n_components, variance, basis_function=basis_function)
+
+    # Build the GP
+    f = ScalableGP(μ, 𝓡)
+
+    # Condition on the times and errors
+    fx = f(t, σ²)
+    return fx
+end
+```
+The associated `paramnames_split` can be written as follows:
+```@example diagnostics
+paramnames_split = Dict("psd" => ["α₁", "f₁", "α₂"],
+        "norm" => "variance",
+        "scale_err" => "ν",
+        "log_transform" =>"c",
+        "mean" => "μ")
+```
+
+
+```@example diagnostics
+figs = run_posterior_predict_checks(array, paramnames,paramnames_split, t, y, yerr, model,GP_model, true; S_low=20., S_high=20., path="", basis_function=basis_function, n_components=n_components, is_integrated_power=false)
 ```
 
 ## In the Fourier domain

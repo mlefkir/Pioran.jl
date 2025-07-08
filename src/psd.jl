@@ -15,11 +15,12 @@ Only QPO is implemented
 function convert_feature(psd_feature::PowerSpectralDensity)
     if psd_feature isa QPO
         Δ = sqrt(4 * psd_feature.Q^2 - 1)
+        ω₀ = 2π * psd_feature.f₀
 
-        a = psd_feature.S₀ * psd_feature.f₀ * psd_feature.Q * 2π
+        a = psd_feature.S₀ * ω₀ * psd_feature.Q / (√2 * π)
         b = a / Δ
-        c = 2π * psd_feature.f₀ / psd_feature.Q / 2
-        d = 2π * psd_feature.f₀ * Δ / 2 / psd_feature.Q
+        c = ω₀ / psd_feature.Q / 2
+        d = c * Δ
         return [a, b, c, d]
     else
         error("Feature $(typeof(psd_feature)) not implemented")
@@ -52,7 +53,7 @@ Get the PSD normalised at the lowest frequency
 function get_normalised_psd(psd_model::PowerSpectralDensity, spectral_points::AbstractVector{<:Real})
     psd_zero = psd_model(spectral_points[1])
     psd_normalised = psd_model(spectral_points) / psd_zero
-    return psd_normalised
+    return psd_normalised, psd_zero
 end
 
 """
@@ -129,7 +130,7 @@ Get the coefficients of the approximated PSD
 function get_approx_coefficients(psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64 = 20, basis_function::String = "SHO")
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function = basis_function)
 
-    psd_normalised = get_normalised_psd(psd_model, spectral_points)
+    psd_normalised = get_normalised_psd(psd_model, spectral_points)[1]
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
     return amplitudes
 end
@@ -151,7 +152,7 @@ Return the approximated PSD. This is essentially to check that the model and the
 """
 function approximated_psd(f, psd_model::PowerSpectralDensity, f0::Real, fM::Real; n_components::Int64 = 20, norm::Real = 1.0, basis_function::String = "SHO", individual = false)
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function = basis_function)
-    psd_normalised = get_normalised_psd(psd_model, spectral_points)
+    psd_normalised = get_normalised_psd(psd_model, spectral_points)[1]
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
 
     if individual
@@ -217,21 +218,47 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
     fM = f_max * S_high
     spectral_points, spectral_matrix = build_approx(n_components, f0, fM, basis_function = basis_function)
 
-    psd_normalised = get_normalised_psd(psd_model, spectral_points)
+    # get the psd of the continuum
+    psd_continuum, psd_features = separate_psd(psd_model)
+
+    @assert !isnothing(psd_continuum) "The PSD model should contain at least one BendingPowerLaw component to be approximated"
+
+    psd_normalised, psd_norm = get_normalised_psd(psd_continuum, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
 
-    integ = get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function, is_integrated_power)
-    # normalise the amplitudes
+    # get the coefficients of the psd features if any
+    cov_features = nothing
+    if !isnothing(psd_features)
+        cov_features = Pioran.get_covariance_from_psd(psd_features) # get coeffs
+        cov_features[1, :] /= psd_norm # apply the same normalisation as the continuum for the amplitudes
+        cov_features[2, :] /= psd_norm
+    end
+    # get the integral of all the psd components
+    integ = get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function, is_integrated_power, cov_features)
+    # normalise the amplitudes of the continuum psd
     amplitudes *= norm / integ
+    # normalise the amplitude of the psd features if any
+    if !isnothing(cov_features)
+        cov_features[1, :] *= norm / integ
+        cov_features[2, :] *= norm / integ
+    end
+
 
     # express the covariance function of the approximation
     if basis_function == "SHO"
 
         a = amplitudes .* spectral_points * π / √2 # π / √2 was removed as it was also in the expression of var but it is now restored as we do not use the variance anymore
         c = √2 * π .* spectral_points
-
-        covariance = SumOfCelerite(a, a, c, c)
-
+        if isnothing(cov_features)
+            covariance = SumOfCelerite(a, a, c, c)
+        else
+            covariance = SumOfCelerite(
+                [a; cov_features[1, :]],
+                [a; cov_features[2, :]],
+                [c; cov_features[3, :]],
+                [c; cov_features[4, :]]
+            )
+        end
     elseif basis_function == "DRWCelerite"
 
         # these are the coefficients of the celerite part of the DRWCelerite
@@ -240,13 +267,21 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
         c = π * spectral_points
         d = √3 * c
 
-        # the coefficents of the DRW part are: a, 0, 2c and 0
+        # the coefficients of the DRW part are: a, 0, 2c and 0
         aa = [a; a]
         bb = [b; zeros(n_components)]
         cc = [c; 2 * c]
         dd = [d; zeros(n_components)]
-        covariance = SumOfCelerite(aa, bb, cc, dd)
-
+        if isnothing(cov_features)
+            covariance = SumOfCelerite(aa, bb, cc, dd)
+        else
+            covariance = SumOfCelerite(
+                [aa; cov_features[1, :]],
+                [bb; cov_features[2, :]],
+                [cc; cov_features[3, :]],
+                [dd; cov_features[4, :]]
+            )
+        end
     else
         error("Basis function" * basis_function * "not implemented")
     end
@@ -290,6 +325,16 @@ function integral_drwcelerite(a, c, x)
 end
 
 @doc raw"""
+    integral_celerite(a, b, c, d, x)
+Computes the integral of the Celerite power spectrum:
+"""
+function integral_celerite(a, b, c, d, x)
+    num = c .^ 2 + d .^ 2 + 2d * x + x^2
+    den = c .^ 2 + d .^ 2 - 2d * x + x^2
+    return (2a * (atan.(c, d - x) - atan.(c, d + x)) .+ b .* log.(num ./ den)) / 4
+end
+
+@doc raw"""
     integrate_basis_function(a,c,x₁,x₂,basis_function)
 
 Computes the integral of the basis function between x₁ and x₂ for a given amplitude a and width c.
@@ -305,7 +350,16 @@ function integrate_basis_function(a, c, x₁, x₂, basis_function)
 end
 
 @doc raw"""
-    get_norm_psd(amplitudes,spectral_points,f_min,f_max,basis_function,is_integrated_power)
+    integrate_psd_feature(a, b, c, d, x₁, x₂)
+
+Computes the integral of a celerite power spectral density with coefficients (a,b,c,d) between x₁ and x₂.
+"""
+function integrate_psd_feature(a, b, c, d, x₁, x₂)
+    return integral_celerite(a, b, c, d, x₂) - integral_celerite(a, b, c, d, x₁)
+end
+
+@doc raw"""
+    get_norm_psd(amplitudes,spectral_points,f_min,f_max,basis_function,is_integrated_power, cov_features=nothing)
 
 Get the normalisation of the sum of basis functions.
 
@@ -316,12 +370,20 @@ Get the normalisation of the sum of basis functions.
 - `f_max::Real`: the maximum frequency in the time series
 - `basis_function::String="SHO"`: the basis function to use, either "SHO" or "DRWCelerite"
 - `is_integrated_power::Bool=true`: if the norm corresponds to integral of the PSD between `f_min` and `f_max` or if it is the integral from 0 to infinity.
+- `cov_features`: PSD features of the PSD, is nothing if there are no features.
 
 """
-function get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function, is_integrated_power)
+function get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function, is_integrated_power, cov_features = nothing)
     if is_integrated_power
         # normalise by the integral from f_min to f_max
         integ = integrate_basis_function(amplitudes, spectral_points, f_min, f_max, basis_function)
+        if !isnothing(cov_features)
+            for coeffs in eachcol(cov_features)
+                a, b, c, d = coeffs
+                feature_integ = integrate_psd_feature(a, b, c, d, 2π * f_min, 2π * f_max) / 2π
+                integ += feature_integ
+            end
+        end
     else
         # normalise by the total integral of the PSD from 0 to +infty
         if basis_function == "SHO"

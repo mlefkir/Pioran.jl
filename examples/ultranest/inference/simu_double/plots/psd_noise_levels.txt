@@ -1,0 +1,4 @@
+# Noise levels
+# mean_noise_level, median_noise_level
+0.0013305070259599064
+0.0006477471298240253

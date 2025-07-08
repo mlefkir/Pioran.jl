@@ -57,7 +57,7 @@ function plot_boxplot_psd_approx(residuals, ratios; path = "")
 
     fig = Figure(size = (800, 600))
     ax1 = Axis(fig[1, 1], xticks = ([1, 2, 3, 4], ["mean", "median", "min", "max"]), ylabel = "Residuals", title = "Distribution of the meta-(mean,max,median) of
-				 residuals and ratios for the PSD approximation")
+residuals and ratios for the PSD approximation")
     ax2 = Axis(fig[2, 1], xticks = ([1, 2, 3, 4], ["mean", "median", "min", "max"]), ylabel = "Ratios")
 
     boxplot!(ax1, x, y)
@@ -229,11 +229,11 @@ Run the prior predictive checks for the model and the approximation of the PSD
 function run_diagnostics(prior_samples, norm_samples, f_min, f_max, model, S_low = 20.0, S_high = 20.0; path = "", basis_function = "SHO", n_components = 20)
     println("Running prior predictive checks...")
     f0, fM = f_min / S_low, f_max * S_high
-    _, _, residuals, ratios, f = sample_approx_model(prior_samples, norm_samples, f0, fM, model, basis_function = basis_function, n_components = n_components)
+    psd, psd_approx, residuals, ratios, f = sample_approx_model(prior_samples, norm_samples, f0, fM, model, basis_function = basis_function, n_components = n_components)
     fig1 = plot_mean_approx(f, residuals, ratios, path = path)
     fig2 = plot_quantiles_approx(f, f_min, f_max, residuals, ratios, path = path)
     fig3 = plot_boxplot_psd_approx(residuals, ratios, path = path)
-    return [fig1, fig2, fig3]
+    return [fig1, fig2, fig3], psd, psd_approx, f
 end
 
 
@@ -248,7 +248,7 @@ Run the posterior predictive checks for the model and the approximation of the P
 - `t::Array{Float64, 1}` : The time series
 - `y::Array{Float64, 1}` : The values of the time series
 - `yerr::Array{Float64, 1}` : The errors of the time series
-- `model::Function` : The model
+- `model::Function` : The model or a string representing the model
 - `with_log_transform::Bool` : If true, the flux is log-transformed
 - `S_low::Float64=20.0` : the scaling factor for the appoximation at low frequencies
 - `S_high::Float64=20.0` : the scaling factor for the appoximation at high frequencies
@@ -261,9 +261,11 @@ Run the posterior predictive checks for the model and the approximation of the P
 - `plot_f_P::Bool=false` : If true, the plots are made in terms of f * PSD
 - `n_components::Int=20` : The number of components to use for the approximation of the PSD
 """
-function run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, is_integrated_power = true, plots = "all", n_samples = 100, path = "", basis_function = "SHO", n_frequencies = 1000, plot_f_P = false, n_components = 20, save_samples = false)
+function run_posterior_predict_checks(samples, paramnames, paramnames_split, t, y, yerr, model, GP_model, with_log_transform; S_low = 20, S_high = 20, is_integrated_power = true, plots = "all", n_samples = 100, path = "", basis_function = "SHO", n_frequencies = 1000, plot_f_P = false, n_components = 20, save_samples = false)
     println("Running posterior predictive checks...")
-    samples_𝓟, samples_norm, samples_ν, samples_μ, samples_c = separate_samples(samples, paramnames, with_log_transform)
+
+
+    samples_𝓟, samples_norm, samples_ν, samples_μ, samples_c = separate_samples(samples, paramnames, paramnames_split)
     figs = []
     if plots == "all"
         println("Plotting the posterior predictive power spectral density")
@@ -286,10 +288,10 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, wi
             with_log_transform = with_log_transform, save_samples = save_samples
         )
         println("Plotting the posterior predictive Lomb-Scargle periodogram")
-        fig2 = plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, path = path, S_low = S_low, S_high = S_high, plot_f_P = plot_f_P, basis_function = basis_function, is_integrated_power = is_integrated_power, n_components = n_components, n_frequencies = n_frequencies)
+        fig2 = plot_lsp_ppc(samples, t, y, yerr, GP_model, path = path, S_low = S_low, S_high = S_high, plot_f_P = plot_f_P, n_frequencies = n_frequencies, with_log_transform = with_log_transform)
         println("Plotting the posterior predictive time series")
         fig3, fig4 =
-            plot_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform, samples_c = samples_c, n_samples = n_samples, basis_function = basis_function, path = path, n_components = n_components)
+            plot_ppc_timeseries(samples, samples_c, t, y, yerr, GP_model, with_log_transform; n_samples = n_samples, path = path)
         push!(figs, fig1, fig2, fig3, fig4)
     else
 
@@ -317,13 +319,12 @@ function run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, wi
         end
         if "lsp" ∈ plots
             println("Plotting the posterior predictive Lomb-Scargle periodogram")
-            fig = plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, path = path, S_low = S_low, S_high = S_high, plot_f_P = plot_f_P, basis_function = basis_function, is_integrated_power = is_integrated_power, n_components = n_components, n_frequencies = n_frequencies, with_log_transform = with_log_transform)
+            fig = plot_lsp_ppc(samples, t, y, yerr, GP_model, path = path, S_low = S_low, S_high = S_high, plot_f_P = plot_f_P, n_frequencies = n_frequencies, with_log_transform = with_log_transform)
             push!(figs, fig)
         end
         if "timeseries" ∈ plots
             println("Plotting the posterior predictive time series")
-            fig1, fig2 =
-                plot_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform, S_low = S_low, S_high = S_high, samples_c = samples_c, n_samples = n_samples, basis_function = basis_function, path = path, n_components = n_components, is_integrated_power = is_integrated_power)
+            fig1, fig2 = plot_ppc_timeseries(samples, samples_c, t, y, yerr, GP_model, with_log_transform; n_samples = n_samples, path = path)
             push!(figs, fig1, fig2)
         end
     end
@@ -473,19 +474,16 @@ function plot_psd_ppc(samples_𝓟, samples_norm, samples_ν, t, y, yerr, model;
 end
 
 """
-	plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, f0, fM, model; plot_f_P=false, n_frequencies=1000, n_samples=1000, is_integrated_power = true, n_components=20, bin_fact=10, path="", basis_function="SHO",with_log_transform = true)
+	plot_lsp_ppc(samples, t, y, yerr, GP_model; plot_f_P=false, n_frequencies=1000, n_samples=1000, is_integrated_power = true, n_components=20, bin_fact=10, path="", basis_function="SHO",with_log_transform = true)
 
 Plot the posterior predictive Lomb-Scargle periodogram of random time series from the model to compare with the one of the data.
 
 # Arguments
-- `samples_𝓟::Array{Float64, n}` : The samples of the model parameters
-- `samples_norm::Array{Float64, 1}` : The variance samples
-- `samples_ν::Array{Float64, 1}` : The ν samples
-- `samples_μ::Array{Float64, 1}` : The μ samples
-- `t::Array{Float64, 1}` : The time series
+- `samples::Array{Float64, n}` : Posterior samples
+- `t::Array{Float64, 1}` : Time series
 - `y::Array{Float64, 1}` : The values of the time series
 - `yerr::Array{Float64, 1}` : The errors of the time series
-- `model::Function` : The model
+- `GP_model::Function` : The GP model is a function that returns a ScalableGP conditionned on t and yerr, its arguments are t,y,yerr,params
 - `S_low = 20.0`: scaling factor for the lowest frequency in the approximation.
 - `S_high = 20.0`: scaling factor for the highest frequency in the approximation.
 - `plot_f_P::Bool=false` : If true, the plot is made in terms of f * PSD
@@ -500,7 +498,7 @@ Plot the posterior predictive Lomb-Scargle periodogram of random time series fro
 
 
 """
-function plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model; S_low = 20, S_high = 20, plot_f_P = false, n_frequencies = 1000, n_samples = 1000, is_integrated_power = true, n_components = 20, bin_fact = 10, path = "", basis_function = "SHO", with_log_transform = true)
+function plot_lsp_ppc(samples, t, y, yerr, GP_model; S_low = 20, S_high = 20, plot_f_P = false, n_frequencies = 1000, n_samples = 1000, bin_fact = 10, path = "", with_log_transform = true)
     #set theme and create output directory
     theme = get_theme()
     set_theme!(theme)
@@ -519,11 +517,14 @@ function plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, 
     Power = []
     # get the posterior predictive lombscargle periodogram
     @showprogress for k in 1:n_samples
-        𝓟 = model(samples_𝓟[k, :]...)
-        𝓡 = approx(𝓟, f_min, f_max, n_components, samples_norm[k], S_low, S_high, basis_function = basis_function, is_integrated_power = is_integrated_power)
-        f = ScalableGP(samples_μ[k], 𝓡)
-        σ2 = yerr .^ 2 * samples_ν[k]
-        fx = f(t, σ2)
+        # 𝓟 = model(samples_𝓟[k, :]...)
+        # 𝓡 = approx(𝓟, f_min, f_max, n_components, samples_norm[k], S_low, S_high, basis_function = basis_function, is_integrated_power = is_integrated_power)
+        # f = ScalableGP(samples_μ[k], 𝓡)
+        # σ2 = yerr .^ 2 * samples_ν[k]
+        # fx = f(t, σ2)
+        params = samples[k, :]
+        fx = GP_model(t, y, yerr, params)
+
         # draw a time series from the GP
         y_sim = rand(fx)
         # periodog = LombScargle.plan(t, s)
@@ -612,25 +613,13 @@ function plot_lsp_ppc(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, 
     return fig
 end
 
-# COV_EXCL_START
 """
-	get_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform; S_low=20, S_high =20, t_pred = nothing, samples_c = nothing, n_samples = 1000, n_components = 20, basis_function = "SHO", is_integrated_power = true)
+	get_ppc_timeseries(samples, t, y, yerr, GP_model, with_log_transform; t_pred = nothing, n_samples = 1000)
 
 Get the random posterior predictive time series from the model and samples
 """
-function get_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, t_pred = nothing, samples_c = nothing, n_samples = 1000, n_components = 20, basis_function = "SHO", is_integrated_power = true)
+function get_ppc_timeseries(samples, samples_c, t, y, yerr, model_GP, with_log_transform; t_pred = nothing, n_samples = 1000)
     P = n_samples
-    # min and max freqs of the obs data
-    f_min = 1 / (t[end] - t[1])
-    f_max = 1 / minimum(diff(t)) / 2
-
-    if isnothing(samples_ν)
-        samples_ν = ones(P)
-    end
-
-    if isnothing(samples_c)
-        samples_c = zeros(P)
-    end
 
     if isnothing(t_pred)
         t_pred = collect(range(t[1], t[end], length = 2 * length(t)))
@@ -640,25 +629,13 @@ function get_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, 
     samples_pred = []
     @showprogress for i in 1:P
 
-        # Rescale the measurement variance and make the flux Gaussian
+        params = samples[i, :]
+        fx = model_GP(t, y, yerr, params)
         if with_log_transform
             y_obs = log.(y .- samples_c[i])
-            σ² = samples_ν[i] .* yerr .^ 2 ./ (y .- samples_c[i]) .^ 2
         else
             y_obs = y
-            σ² = samples_ν[i] .* yerr .^ 2
         end
-
-        # Define power spectral density function
-        𝓟 = model(samples_𝓟[i, :]...)
-
-        # Approximation of the PSD to form a covariance function
-        𝓡 = approx(𝓟, f_min, f_max, n_components, samples_norm[i], S_low, S_high, basis_function = basis_function, is_integrated_power = is_integrated_power)
-
-        # Build the GP
-        f = ScalableGP(samples_μ[i], 𝓡)
-        fx = f(t, σ²)
-
         # Condition the GP on the observed data
         fp = posterior(fx, y_obs)
 
@@ -785,38 +762,28 @@ function plot_simu_ppc_timeseries(t_pred, ts_quantiles, t, y, yerr; path = "")
 end
 
 """
-    plot_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, f0, fM, model, with_log_transform;S_low = 20, S_high = 20, t_pred = nothing, samples_c = nothing, n_samples = 100, n_components = 20, basis_function = "SHO", path = "",is_integrated_power=true)
+    plot_ppc_timeseries(samples, t, y, yerr, GP_model, with_log_transform; t_pred = nothing, n_samples = 100, path = "")
 
 Plot the posterior predictive time series and the residuals
 
 # Arguments
-- `samples_𝓟::Matrix{Float64}` : The samples of the model parameters
-- `samples_norm::Vector{Float64}` : The variance samples
-- `samples_ν::Vector{Float64}` : The noise level samples
-- `samples_μ::Vector{Float64}` : The mean samples
+- `samples::Matrix{Float64}` : The samples of the model parameters
 - `t::Vector{Float64}` : The time series
 - `y::Vector{Float64}` : The values of the time series
 - `yerr::Vector{Float64}` : The errors of the time series
-- `model::PowerSpectralDensity` : The model
+- `GP_model::PowerSpectralDensity` : The model
 - `with_log_transform::Bool` : If true, the flux was log-transformed for the inference
-- `S_low = 20.0`: scaling factor for the lowest frequency in the approximation.
-- `S_high = 20.0`: scaling factor for the highest frequency in the approximation.
 - `t_pred::Vector{Float64}=nothing` : The prediction times
-- `samples_c::Vector{Float64}=nothing` : The samples of the constant (if the flux was log-transformed)
 - `n_samples::Int=100` : The number of samples to draw from the posterior predictive distribution
-- `n_components::Int=20` : The number of components to use for the approximation of the PSD
-- `basis_function::String="SHO"` : The basis function for the approximation of the PSD
-- `is_integrated_power::Bool = true` : if the norm corresponds to integral of the PSD between `f_min` and `f_max` or if it is the integral from 0 to infinity.
-
 """
-function plot_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, t_pred = nothing, samples_c = nothing, n_samples = 100, n_components = 20, basis_function = "SHO", path = "", is_integrated_power = true)
+function plot_ppc_timeseries(samples, samples_c, t, y, yerr, GP_model, with_log_transform; t_pred = nothing, n_samples = 100, path = "")
     theme = get_theme()
     set_theme!(theme)
     if !ispath(path)
         mkpath(path)
     end
     # get the posterior predictive time series and the prediction times
-    ts_array, t_pred = get_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ, t, y, yerr, model, with_log_transform, S_low = S_low, S_high = S_high, t_pred = t_pred, samples_c = samples_c, n_samples = n_samples, n_components = n_components, basis_function = basis_function, is_integrated_power = is_integrated_power)
+    ts_array, t_pred = get_ppc_timeseries(samples, samples_c, t, y, yerr, GP_model, with_log_transform, t_pred = t_pred, n_samples = n_samples)
     # find the indexes of the observed data in the prediction times for the residuals
     indexes = [findall(t_pred -> t_pred == t_i, t_pred)[1] for t_i in t]
 
@@ -838,6 +805,7 @@ function plot_ppc_timeseries(samples_𝓟, samples_norm, samples_ν, samples_μ,
     return fig1, fig2
 end
 
+# COV_EXCL_START
 function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t, y, yerr, p, q; plot_f_P = false, n_frequencies = 1000, path = "", with_log_transform = false)
     if p != size(samples_rα, 2)
         error("p=$(p) is not equal to the number of columns in samples_rα=$(size(samples_rα, 2))")

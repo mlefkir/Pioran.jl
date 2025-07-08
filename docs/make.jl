@@ -8,7 +8,8 @@ using Tonari
 bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"), style = :authoryear)
 
 BASIC_PAGES = ["explanation.md", "modelling.md", "simulations.md", "timeseries.md", "diagnostics.md", "basis_functions.md"]
-ADVANCED_PAGES = ["turing.md", "ultranest.md"]
+INFERENCE_PAGES = ["turing.md", "ultranest.md"]
+ADVANCED_PAGES = ["custom_mean.md", "adding_features.md"]
 
 makedocs(
     # modules = [Tonari],
@@ -17,7 +18,8 @@ makedocs(
         "Home" => "index.md",
         "Getting Started" => "getting_started.md",
         "Basic usage" => BASIC_PAGES,
-        "Inference" => ADVANCED_PAGES,
+        "Inference" => INFERENCE_PAGES,
+        "Advanced modelling" => ADVANCED_PAGES,
         "CARMA" => "carma.md",
         "Bibliography" => "bibliography.md",
         "API Reference" => "api.md",

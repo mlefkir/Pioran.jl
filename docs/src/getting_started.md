@@ -79,11 +79,10 @@ using Distributions
 logpdf(f(t, σ²), y)
 ```
 
-We can combine all these steps in a single function to compute the log-likelihood of the data given the parameters of the power spectral density and the Gaussian process.
+We can combine all these steps in a function to build the GP and then compute the log-likelihood of the data given the parameters of the power spectral density and the Gaussian process.
 
 ```@example getting_started
-
-function loglikelihood(y, t, σ, params)
+function GP_model(t, y, σ, params)
 
     α₁, f₁, α₂, norm, μ = params
 
@@ -96,9 +95,14 @@ function loglikelihood(y, t, σ, params)
     𝓡 = approx(𝓟, f_min, f_max, 20, norm, basis_function="SHO")
 
     # Build the GP
-    f = ScalableGP(μ, 𝓡)
+    GP = ScalableGP(μ, 𝓡)
 
     # sample the conditioned distribution
-    return logpdf(f(t, σ²), y)
+    return GP(t,σ²)
+end
+
+function loglikelihood(t, y, σ, params)
+    GP = GP_model(t, y, σ, params)
+    return logpdf(GP, y)
 end
 ```

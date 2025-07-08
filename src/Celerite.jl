@@ -45,11 +45,10 @@ end
 
 function Celerite_psd(f, a, b, c, d)
     ω = 2π * f
-    num = (a * c + b * d) * (c^2 + d^2) + (a * c - b * d) * ω .^ 2
-    den = ω .^ 4 + 2 * (c^2 - d^2) * ω .^ 2 + (c^2 + d^2)^2
+    num = (a * c + b * d) * (c^2 + d^2) .+ (a * c - b * d) * ω .^ 2
+    den = ω .^ 4 + 2 * (c^2 - d^2) * ω .^ 2 .+ (c^2 + d^2)^2
     return num ./ den
 end
-
 
 """ evaluate(f, C::Celerite)
 
