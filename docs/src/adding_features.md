@@ -2,7 +2,7 @@
 
 While this package is designed to model broadband power spectral densities that are power-law-like, we can add narrow features using basis functions.
 
-
+This feature is currently experimental and may not work properly. Use it at your own risk!
 
 ## Defining the model and simulating form the model
 

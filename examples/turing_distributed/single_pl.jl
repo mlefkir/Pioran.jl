@@ -46,19 +46,18 @@ end
     variance ~ LogNormal(log(0.5), 1.25)
     ν ~ Gamma(2, 0.5)
     μ ~ Normal(0, 2)
-    c ~ LogUniform(1.0e-6, minimum(y) * 0.99)
 
     # Rescale the measurement variance
-    σ² = ν .* σ .^ 2 ./ (y .- c) .^ 2
+    σ² = ν .* σ .^ 2 ./ y .^ 2
 
     # Make the flux Gaussian
-    y = log.(y .- c)
+    y = log.(y)
 
     # Define power spectral density function
     𝓟 = model(α₁, f₁, α₂)
 
     # Approximation of the PSD to form a covariance function
-    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function = basis_function)
+    𝓡 = approx(𝓟, f_min, f_max, n_components, variance, basis_function = basis_function)
 
     # Build the GP
     f = ScalableGP(μ, 𝓡)
@@ -70,7 +69,7 @@ end
 
 @everywhere begin
     n_adapts = 500 # number of adaptation steps
-    tap = 0.65 #target acceptance probability
+    tap = 0.8 #target acceptance probability
     sampler = externalsampler(AdvancedHMC.NUTS(tap))
 end
 

@@ -33,8 +33,6 @@ num_chains = nworkers();
     # options for the approximation
     basis_function = "SHO"
     n_components = 20
-    model = SingleBendingPowerLaw
-    prior_checks = true
 end
 
 @everywhere @model function inference_model(y, t, σ)
@@ -59,7 +57,7 @@ end
     𝓟 = DoubleBendingPowerLaw(α₁, f₁, α₂, f₂, α₃)
 
     # Approximation of the PSD to form a covariance function
-    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function = basis_function)
+    𝓡 = approx(𝓟, f_min, f_max, n_components, variance, basis_function = basis_function)
 
     # Build the GP
     f = ScalableGP(μ, 𝓡)
@@ -71,7 +69,7 @@ end
 
 @everywhere begin
     n_adapts = 500 # number of adaptation steps
-    tap = 0.65 #target acceptance probability
+    tap = 0.8 #target acceptance probability
     sampler = externalsampler(AdvancedHMC.NUTS(tap))
 end
 

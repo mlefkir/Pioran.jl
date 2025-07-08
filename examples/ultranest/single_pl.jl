@@ -60,31 +60,37 @@ basis_function = "SHO"
 n_components = 20
 model = SingleBendingPowerLaw
 posterior_checks = true
-prior_checks = true
+prior_checks = false
 
-function loglikelihood(y, t, σ, params)
+function GP_model(t, y, σ, params, n_components = n_components, basis_function = basis_function)
 
-    α₁, f₁, α₂, variance, ν, μ, c = params
+    α₁, f₁, α₂, variance, ν, μ = params
 
     # Rescale the measurement variance
-    σ² = ν .* σ .^ 2 ./ (y .- c) .^ 2
+    σ² = ν .* σ .^ 2 ./ y .^ 2
 
     # Make the flux Gaussian
-    yn = log.(y .- c)
+    yn = log.(y)
 
     # Define power spectral density function
     𝓟 = model(α₁, f₁, α₂)
 
     # Approximation of the PSD to form a covariance function
-    𝓡 = approx(𝓟, f0, fM, n_components, variance, basis_function = basis_function)
+    𝓡 = approx(𝓟, f_min, f_max, n_components, variance, basis_function = basis_function)
 
     # Build the GP
     f = ScalableGP(μ, 𝓡)
 
-    # sample the conditioned distribution
-    return logpdf(f(t, σ²), yn)
+    # return the conditioned distribution on the times and errors and the transformed values
+    return f(t, σ²), yn
 end
-logl(pars) = loglikelihood(y, t, yerr, pars)
+
+function loglikelihood(t, y, σ, params)
+    fx, yn = GP_model(t, y, σ, params)
+    return logpdf(fx, yn)
+end
+
+logl(pars) = loglikelihood(t, y, yerr, pars)
 
 # Priors
 function prior_transform(cube)
@@ -94,10 +100,9 @@ function prior_transform(cube)
     variance = quantile(LogNormal(μₙ, σₙ), cube[4])
     ν = quantile(Gamma(2, 0.5), cube[5])
     μ = quantile(Normal(x̄, 5 * sqrt(va)), cube[6])
-    c = quantile(LogUniform(1.0e-6, minimum(y) * 0.99), cube[7])
-    return [α₁, f₁, α₂, variance, ν, μ, c]
+    return [α₁, f₁, α₂, variance, ν, μ]
 end
-paramnames = ["α₁", "f₁", "α₂", "variance", "ν", "μ", "c"]
+paramnames = ["α₁", "f₁", "α₂", "variance", "ν", "μ"]
 
 if MPI.Comm_rank(comm) == 0 && prior_checks
     unif = rand(rng, 7, 3000) # uniform samples from the unit hypercube
@@ -115,5 +120,14 @@ sampler.plot()
 
 if MPI.Comm_rank(comm) == 0 && posterior_checks
     samples = readdlm(dir * "/chains/equal_weighted_post.txt", skipstart = 1)
-    run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, true; path = plot_path, basis_function = basis_function, n_components = n_components)
+    paramnames_split = Dict(
+        "psd" => ["α₁", "f₁", "α₂"],
+        "norm" => "variance",
+        "scale_err" => "ν",
+        "log_transform" => "c",
+        "mean" => "μ"
+    )
+    GP_model2(t, y, σ, params) = GP_model(t, y, σ, params)[1]
+
+    run_posterior_predict_checks(samples, paramnames, paramnames_split, t, y, yerr, model, GP_model2, true; path = plot_path, basis_function = basis_function, n_components = n_components)
 end

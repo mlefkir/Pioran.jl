@@ -61,15 +61,15 @@ model = DoubleBendingPowerLaw
 posterior_checks = true
 prior_checks = true
 
-function loglikelihood(y, t, σ, params)
+function GP_model(t, y, σ, params, n_components = n_components, basis_function = basis_function)
 
-    α₁, f₁, α₂, f₂, α₃, variance, ν, μ, c = params
+    α₁, f₁, α₂, f₂, α₃, variance, ν, μ = params
 
     # Rescale the measurement variance
-    σ² = ν .* σ .^ 2 ./ (y .- c) .^ 2
+    σ² = ν .* σ .^ 2 ./ y .^ 2 #.- c) .^ 2
 
     # Make the flux Gaussian
-    yn = log.(y .- c)
+    yn = log.(y) #.- c)
 
     # Define power spectral density function
     𝓟 = model(α₁, f₁, α₂, f₂, α₃)
@@ -81,9 +81,15 @@ function loglikelihood(y, t, σ, params)
     f = ScalableGP(μ, 𝓡)
 
     # sample the conditioned distribution
-    return logpdf(f(t, σ²), yn)
+    return f(t, σ²), yn
 end
-logl(pars) = loglikelihood(y, t, yerr, pars)
+
+function loglikelihood(t, y, σ, params)
+    fx, yn = GP_model(t, y, σ, params)
+    return logpdf(fx, yn)
+end
+
+logl(pars) = loglikelihood(t, y, yerr, pars)
 
 # Priors
 function prior_transform(cube)
@@ -95,10 +101,10 @@ function prior_transform(cube)
     variance = quantile(LogNormal(μₙ, σₙ), cube[6])
     ν = quantile(Gamma(2, 0.5), cube[7])
     μ = quantile(Normal(x̄, 5 * sqrt(va)), cube[8])
-    c = quantile(LogUniform(1.0e-6, minimum(y) * 0.99), cube[9])
-    return [α₁, f₁, α₂, f₂, α₃, variance, ν, μ, c]
+    # c = quantile(LogUniform(1.0e-6, minimum(y) * 0.99), cube[9])
+    return [α₁, f₁, α₂, f₂, α₃, variance, ν, μ] #, c]
 end
-paramnames = ["α₁", "f₁", "α₂", "f₂", "α₃", "variance", "ν", "μ", "c"]
+paramnames = ["α₁", "f₁", "α₂", "f₂", "α₃", "variance", "ν", "μ"] #, "c"]
 
 if MPI.Comm_rank(comm) == 0 && prior_checks
     unif = rand(rng, 9, 3000) # uniform samples from the unit hypercube
@@ -116,5 +122,13 @@ sampler.plot()
 
 if MPI.Comm_rank(comm) == 0 && posterior_checks
     samples = readdlm(dir * "/chains/equal_weighted_post.txt", skipstart = 1)
-    run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, true; path = plot_path, basis_function = basis_function, n_components = n_components)
+    paramnames_split = Dict(
+        "psd" => ["α₁", "f₁", "α₂", "f₂", "α₃"],
+        "norm" => "variance",
+        "scale_err" => "ν",
+        # "log_transform" => "c",
+        "mean" => "μ"
+    )
+
+    run_posterior_predict_checks(samples, paramnames, paramnames_split, t, y, yerr, model, GP_model, true; path = plot_path, basis_function = basis_function, n_components = n_components)
 end
