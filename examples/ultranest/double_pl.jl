@@ -1,4 +1,4 @@
-""" Example script for the inference of a double bending power spectral density using Pioran and ultranest (python package).
+#= Example script for the inference of a double bending power spectral density using Pioran and ultranest (python package).
 
 run with:
 ```bash
@@ -13,7 +13,7 @@ mpirun -n 4 julia double.jl data.txt
 ```
 where `-n 4` is the number of processes to use.
 
-"""
+=#
 # load MPI and initialise
 using MPI
 MPI.Init()
