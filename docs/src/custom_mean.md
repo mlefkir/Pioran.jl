@@ -67,7 +67,7 @@ t = LinRange(0,2000,200)
 σ = 0.5 * ones(length(t))
 
 params = [0.3,1e-2,2.9,1.03,1.0,0.2,2.3,0.3,320]
-GP = GP_model(t, y, σ, params)
+GP = GP_model(t, nothing, σ, params)
 ```
 
 We now sample a few realisations from the GP and see that the realisations are indeed periodic.
@@ -82,6 +82,6 @@ Plots.scatter(t,y,yerr=σ,xlabel="Time",ylabel="Value",legend=false,framestyle =
 To use such process for inference it is as easy as before. You need to get the loglikelihood using the `logpdf` function as follows:
 
 ```@example custommean
-GP = GP_model(t, σ, params)
+GP = GP_model(t,y, σ, params)
 logpdf(GP,y[1])
 ```
