@@ -129,6 +129,7 @@ if MPI.Comm_rank(comm) == 0 && posterior_checks
         # "log_transform" => "c",
         "mean" => "μ"
     )
+    GP_model2(t, y, σ, params) = GP_model(t, y, σ, params)[1]
 
-    run_posterior_predict_checks(samples, paramnames, paramnames_split, t, y, yerr, model, GP_model, true; path = plot_path, basis_function = basis_function, n_components = n_components)
+    run_posterior_predict_checks(samples, paramnames, paramnames_split, t, y, yerr, model, GP_model2, true; path = plot_path, basis_function = basis_function, n_components = n_components)
 end
