@@ -94,7 +94,7 @@ logl(pars) = loglikelihood(t, y, yerr, pars)
 
 # Priors
 function prior_transform(cube)
-    α₁ = quantile(Uniform(0.0, 1.25), cube[1])
+    α₁ = quantile(Uniform(0.0, 1.5), cube[1])
     f₁ = quantile(LogUniform(min_f_b, max_f_b), cube[2])
     α₂ = quantile(Uniform(α₁, 4.0), cube[3])
     variance = quantile(LogNormal(μₙ, σₙ), cube[4])
