@@ -21,7 +21,6 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 Tonari = "91081016-e225-4157-90a8-4c5abf36a564"
-VectorizedStatistics = "3b853605-1c98-4422-8364-4bd93ee0529e"
 
 [weakdeps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
@@ -44,7 +43,6 @@ ProgressMeter = "1"
 StatsBase = "0.34"
 StructArrays = "0.6.21"
 Tonari = "0.2.0"
-VectorizedStatistics = "0.5"
 julia = "1"
 
 [extras]

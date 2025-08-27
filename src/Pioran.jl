@@ -14,7 +14,6 @@ using StructArrays
 using LoopVectorization
 using Tonari
 using CairoMakie
-using VectorizedStatistics
 using LombScargle
 
 export SHO, Celerite, Exp, CARMA

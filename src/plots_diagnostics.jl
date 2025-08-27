@@ -86,9 +86,12 @@ function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path = "")
     if !ispath(path)
         mkpath(path)
     end
-    res_quantiles = vquantile!.(Ref(residuals), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-    rat_quantiles = vquantile!.(Ref(ratios), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+    quantiles_prob = [0.025, 0.16, 0.5, 0.84, 0.975]
 
+    # res_quantiles = vquantile!.(Ref(residuals), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+    # rat_quantiles = vquantile!.(Ref(ratios), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+    res_quantiles = [[quantile(k,p) for k in eachrow(residuals)] for p in quantiles_prob]
+    rat_quantiles = [[quantile(k,p) for k in eachrow(ratios)] for p in quantiles_prob]
     #   figure
     fig = Figure(size = (800, 600))
     ax1 = Axis(fig[1, 1], xscale = log10, ylabel = "Residuals", xminorticks = IntervalsBetween(9))
@@ -387,29 +390,26 @@ function plot_psd_ppc(samples_𝓟, samples_norm, samples_ν, t, y, yerr, model;
     P = size(samples_norm, 1)
     spectral_points, _ = Pioran.build_approx(n_components, f0, fM, basis_function = basis_function)
 
-    psd, psd_approx, _, _, f = sample_approx_model(samples_𝓟', samples_norm, f0, fM, model, n_frequencies = n_frequencies, basis_function = basis_function, n_components = n_components)
+    psd, psd_approx, _, _, f = Pioran.sample_approx_model(samples_𝓟', samples_norm, f0, fM, model, n_frequencies = n_frequencies, basis_function = basis_function, n_components = n_components)
 
     amplitudes = [Pioran.get_approx_coefficients.(Ref(model(samples_𝓟[k, :]...)), f0, fM, basis_function = basis_function, n_components = n_components) for k in 1:P]
 
-    norm = [get_norm_psd(amplitudes[k], spectral_points, f_min, f_max, basis_function, is_integrated_power) for k in 1:P]
+    norm = [Pioran.get_norm_psd(amplitudes[k], spectral_points, f_min, f_max, basis_function, is_integrated_power) for k in 1:P]
 
     psd_m = psd ./ norm'
     psd_approx_m = psd_approx ./ norm'
-
-    psd_quantiles = vquantile!.(Ref(psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-    psd_approx_quantiles = vquantile!.(Ref(psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-
     if save_samples
-        open(path * "psd_ppc_samples.txt"; write = true) do f
-            write(f, "# Posterior predictive power spectral density samples\n# f, psd, psd_approx\n")
-            writedlm(f, psd_m)
+        open(path * "psd_ppc_samples.txt"; write = true) do fil
+            write(fil, "# Posterior predictive power spectral density samples\n# f, psd, psd_approx\n")
+            writedlm(fil, psd_m)
         end
     end
     fig = Figure(size = (800, 600))
-
+    quantiles_prob = [0.025, 0.16, 0.5, 0.84, 0.975]
     if plot_f_P
-        psd_quantiles = vquantile!.(Ref(f .* psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-        psd_approx_quantiles = vquantile!.(Ref(f .* psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+        psd_quantiles = [[quantile(k,p) for k in eachrow(f.*psd_m)] for p in quantiles_prob]
+        psd_approx_quantiles= [[quantile(k,p) for k in eachrow(f.*psd_approx_m)] for p in quantiles_prob]
+
         ax1 = Axis(
             fig[1, 1], xscale = log10, yscale = log10, xlabel = L"Frequency (${d}^{-1}$)", ylabel = "f PSD",
             xminorticks = IntervalsBetween(9), yminorticks = IntervalsBetween(9), title = "Posterior predictive power spectral density"
@@ -432,6 +432,10 @@ function plot_psd_ppc(samples_𝓟, samples_norm, samples_ν, t, y, yerr, model;
             fig[1, 1], xscale = log10, yscale = log10, xlabel = L"Frequency (${d}^{-1}$)", ylabel = "PSD",
             xminorticks = IntervalsBetween(9), yminorticks = IntervalsBetween(9), title = "Posterior predictive power spectral density"
         )
+        # psd_quantiles = vquantile!.(Ref(psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+        # psd_approx_quantiles = vquantile!.(Ref(psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+        psd_quantiles = [[quantile(k,p) for k in eachrow(psd_m)] for p in quantiles_prob]
+        psd_approx_quantiles= [[quantile(k,p) for k in eachrow(psd_approx_m)] for p in quantiles_prob]
 
         lines!(ax1, f, vec(psd_quantiles[3]), label = "Model Median", color = :blue)
         band!(ax1, f, vec(psd_quantiles[1]), vec(psd_quantiles[5]), color = (:blue, 0.2), label = "95%")
@@ -457,17 +461,17 @@ function plot_psd_ppc(samples_𝓟, samples_norm, samples_ν, t, y, yerr, model;
 
     a = vcat([f', psd_quantiles..., psd_approx_quantiles...])
 
-    open(path * "psd_noise_levels.txt"; write = true) do f
-        write(f, "# Noise levels\n# mean_noise_level, median_noise_level\n")
-        writedlm(f, [mean_noise_level, median_noise_level])
+    open(path * "psd_noise_levels.txt"; write = true) do fil
+        write(fil, "# Noise levels\n# mean_noise_level, median_noise_level\n")
+        writedlm(fil, [mean_noise_level, median_noise_level])
     end
 
-    open(path * "psd_ppc_data.txt"; write = true) do f
-        write(f, "# Posterior predictive power spectral density\n# quantiles=[0.025, 0.16, 0.5, 0.84, 0.975] \n# f, psd_quantiles, psd_approx_quantiles\n")
+    open(path * "psd_ppc_data.txt"; write = true) do fil
+        write(fil, "# Posterior predictive power spectral density\n# quantiles=[0.025, 0.16, 0.5, 0.84, 0.975] \n# f, psd_quantiles, psd_approx_quantiles\n")
         if plot_f_P
-            write(f, "# f * PSD\n")
+            write(fil, "# f * PSD\n")
         end
-        writedlm(f, a)
+        writedlm(fil, a)
     end
     save(path * "psd_ppc.pdf", fig)
     return fig
@@ -531,14 +535,20 @@ function plot_lsp_ppc(samples, t, y, yerr, GP_model; S_low = 20, S_high = 20, pl
         ls = lombscargle(t, y_sim, yerr, frequencies = freq)
         push!(Power, freqpower(ls)[2][1:(end - 1)])
     end
+    quantiles_prob = [0.025, 0.16, 0.5, 0.84, 0.975]
 
     ls_array = mapreduce(permutedims, vcat, Power)'
     if plot_f_P
         label = "f * Periodogram"
-        ls_quantiles = vquantile!.(Ref(freq[1:(end - 1)] .* ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+
+
+        ls_quantiles = [[quantile(k,p) for k in eachrow(freq[1:(end - 1)] .* ls_array)] for p in quantiles_prob]
+        # ls_quantiles = vquantile!.(Ref(freq[1:(end - 1)] .* ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
     else
         label = "Periodogram"
-        ls_quantiles = vquantile!.(Ref(ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+        # ls_quantiles = vquantile!.(Ref(ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+        ls_quantiles = [[quantile(k,p) for k in eachrow(ls_array)] for p in quantiles_prob]
+
     end
     # compute the LSP of the observed data
     if with_log_transform
@@ -787,9 +797,13 @@ function plot_ppc_timeseries(samples, samples_c, t, y, yerr, GP_model, with_log_
     # find the indexes of the observed data in the prediction times for the residuals
     indexes = [findall(t_pred -> t_pred == t_i, t_pred)[1] for t_i in t]
 
-    ts_quantiles = vquantile!.(Ref(ts_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+    quantiles_prob =  [0.025, 0.16, 0.5, 0.84, 0.975]
+    # ts_quantiles = vquantile!.(Ref(ts_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+    ts_quantiles = [[quantile(k,p) for k in eachrow(ts_array)] for p in quantiles_prob]
     res = (y .- ts_array[indexes, :]) ./ yerr
-    res_quantiles = vquantile!.(Ref(res), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+    # res_quantiles = vquantile!.(Ref(res), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+    res_quantiles = [[quantile(k,p) for k in eachrow(res)] for p in quantiles_prob]
+
     mean_res = mean(res, dims = 2)
 
 
@@ -813,6 +827,7 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t
     if q + 1 != size(samples_β, 2)
         error("q+1=$(q + 1) is not equal to the number of columns in samples_β=$(size(samples_β, 2))")
     end
+    quantiles_prob =  [0.025, 0.16, 0.5, 0.84, 0.975]
 
     theme = get_theme()
     set_theme!(theme)
@@ -846,13 +861,14 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t
     psd_samples = [Pioran.evaluate(CARMA(p, q, convert.(Complex, samples_rα[i, :]), samples_β[i, :], samples_norm[i]), f) for i in 1:P]
     psd_samples = mapreduce(permutedims, vcat, psd_samples)
 
-    psd_quantiles = vquantile!.(Ref(psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
 
 
     fig = Figure(size = (800, 600))
 
     if plot_f_P
-        psd_quantiles = vquantile!.(Ref(f .* psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+        psd_quantiles = [[quantile(k,p) for k in eachrow(f .* psd_samples')] for p in quantiles_prob]
+
+        # psd_quantiles = vquantile!.(Ref(f .* psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
         ax1 = Axis(
             fig[1, 1], xscale = log10, yscale = log10, xlabel = L"Frequency (${d}^{-1}$)", ylabel = "f PSD",
             xminorticks = IntervalsBetween(9), yminorticks = IntervalsBetween(9), title = "Posterior predictive power spectral density"
@@ -867,6 +883,10 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t
 
         vlines!(ax1, [f_min; f_max], color = :black, linestyle = :dot, label = "Observed window")
     else
+        # psd_quantiles = vquantile!.(Ref(psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
+        psd_quantiles = [[quantile(k,p) for k in eachrow(psd_samples')] for p in quantiles_prob]
+
+
         ax1 = Axis(
             fig[1, 1], xscale = log10, yscale = log10, xlabel = L"Frequency (${d}^{-1}$)", ylabel = "PSD",
             xminorticks = IntervalsBetween(9), yminorticks = IntervalsBetween(9), title = "Posterior predictive power spectral density"
