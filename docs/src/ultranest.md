@@ -65,6 +65,13 @@ using MPI
 MPI.Init()
 ```
 
+!!! note "Issues with H5PY"
+    Sometimes, when running the code with ultranest and MPI you can get a weird error from hdf5. The common way to solve this is to reinstall h5py with support for MPI (here openmpi) as follows:
+
+    ```bash
+    conda install -c conda-forge h5py=*=mpi_openmpi*
+    ```
+
 ## Modelling with ultranest
 
 We assume the reader is familiar with nested sampling and the `ultranest` package.

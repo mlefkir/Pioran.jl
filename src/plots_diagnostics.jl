@@ -40,13 +40,13 @@ function plot_boxplot_psd_approx(residuals, ratios; path = "")
     if !ispath(path)
         mkpath(path)
     end
-    meta_mean = vec(vmean(residuals, dims = 1))
-    meta_median = vec(vmedian(residuals, dims = 1))
+    meta_mean = vec(mean(residuals, dims = 1))
+    meta_median = vec(median(residuals, dims = 1))
     meta_max = vec(maximum(abs.(residuals), dims = 1))
     meta_min = vec(minimum(abs.(residuals), dims = 1))
 
-    meta_mean_rat = vec(vmean(ratios, dims = 1))
-    meta_median_rat = vec(vmedian(ratios, dims = 1))
+    meta_mean_rat = vec(mean(ratios, dims = 1))
+    meta_median_rat = vec(median(ratios, dims = 1))
     meta_max_rat = vec(maximum(abs.(ratios), dims = 1))
     meta_min_rat = vec(minimum(abs.(ratios), dims = 1))
 
@@ -90,8 +90,8 @@ function plot_quantiles_approx(f, f_min, f_max, residuals, ratios; path = "")
 
     # res_quantiles = vquantile!.(Ref(residuals), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
     # rat_quantiles = vquantile!.(Ref(ratios), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-    res_quantiles = [[quantile(k,p) for k in eachrow(residuals)] for p in quantiles_prob]
-    rat_quantiles = [[quantile(k,p) for k in eachrow(ratios)] for p in quantiles_prob]
+    res_quantiles = [[quantile(k, p) for k in eachrow(residuals)] for p in quantiles_prob]
+    rat_quantiles = [[quantile(k, p) for k in eachrow(ratios)] for p in quantiles_prob]
     #   figure
     fig = Figure(size = (800, 600))
     ax1 = Axis(fig[1, 1], xscale = log10, ylabel = "Residuals", xminorticks = IntervalsBetween(9))
@@ -407,8 +407,8 @@ function plot_psd_ppc(samples_𝓟, samples_norm, samples_ν, t, y, yerr, model;
     fig = Figure(size = (800, 600))
     quantiles_prob = [0.025, 0.16, 0.5, 0.84, 0.975]
     if plot_f_P
-        psd_quantiles = [[quantile(k,p) for k in eachrow(f.*psd_m)] for p in quantiles_prob]
-        psd_approx_quantiles= [[quantile(k,p) for k in eachrow(f.*psd_approx_m)] for p in quantiles_prob]
+        psd_quantiles = [[quantile(k, p) for k in eachrow(f .* psd_m)] for p in quantiles_prob]
+        psd_approx_quantiles = [[quantile(k, p) for k in eachrow(f .* psd_approx_m)] for p in quantiles_prob]
 
         ax1 = Axis(
             fig[1, 1], xscale = log10, yscale = log10, xlabel = L"Frequency (${d}^{-1}$)", ylabel = "f PSD",
@@ -434,8 +434,8 @@ function plot_psd_ppc(samples_𝓟, samples_norm, samples_ν, t, y, yerr, model;
         )
         # psd_quantiles = vquantile!.(Ref(psd_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
         # psd_approx_quantiles = vquantile!.(Ref(psd_approx_m), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-        psd_quantiles = [[quantile(k,p) for k in eachrow(psd_m)] for p in quantiles_prob]
-        psd_approx_quantiles= [[quantile(k,p) for k in eachrow(psd_approx_m)] for p in quantiles_prob]
+        psd_quantiles = [[quantile(k, p) for k in eachrow(psd_m)] for p in quantiles_prob]
+        psd_approx_quantiles = [[quantile(k, p) for k in eachrow(psd_approx_m)] for p in quantiles_prob]
 
         lines!(ax1, f, vec(psd_quantiles[3]), label = "Model Median", color = :blue)
         band!(ax1, f, vec(psd_quantiles[1]), vec(psd_quantiles[5]), color = (:blue, 0.2), label = "95%")
@@ -542,12 +542,12 @@ function plot_lsp_ppc(samples, t, y, yerr, GP_model; S_low = 20, S_high = 20, pl
         label = "f * Periodogram"
 
 
-        ls_quantiles = [[quantile(k,p) for k in eachrow(freq[1:(end - 1)] .* ls_array)] for p in quantiles_prob]
+        ls_quantiles = [[quantile(k, p) for k in eachrow(freq[1:(end - 1)] .* ls_array)] for p in quantiles_prob]
         # ls_quantiles = vquantile!.(Ref(freq[1:(end - 1)] .* ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
     else
         label = "Periodogram"
         # ls_quantiles = vquantile!.(Ref(ls_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-        ls_quantiles = [[quantile(k,p) for k in eachrow(ls_array)] for p in quantiles_prob]
+        ls_quantiles = [[quantile(k, p) for k in eachrow(ls_array)] for p in quantiles_prob]
 
     end
     # compute the LSP of the observed data
@@ -797,12 +797,12 @@ function plot_ppc_timeseries(samples, samples_c, t, y, yerr, GP_model, with_log_
     # find the indexes of the observed data in the prediction times for the residuals
     indexes = [findall(t_pred -> t_pred == t_i, t_pred)[1] for t_i in t]
 
-    quantiles_prob =  [0.025, 0.16, 0.5, 0.84, 0.975]
+    quantiles_prob = [0.025, 0.16, 0.5, 0.84, 0.975]
     # ts_quantiles = vquantile!.(Ref(ts_array), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-    ts_quantiles = [[quantile(k,p) for k in eachrow(ts_array)] for p in quantiles_prob]
+    ts_quantiles = [[quantile(k, p) for k in eachrow(ts_array)] for p in quantiles_prob]
     res = (y .- ts_array[indexes, :]) ./ yerr
     # res_quantiles = vquantile!.(Ref(res), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-    res_quantiles = [[quantile(k,p) for k in eachrow(res)] for p in quantiles_prob]
+    res_quantiles = [[quantile(k, p) for k in eachrow(res)] for p in quantiles_prob]
 
     mean_res = mean(res, dims = 2)
 
@@ -827,7 +827,7 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t
     if q + 1 != size(samples_β, 2)
         error("q+1=$(q + 1) is not equal to the number of columns in samples_β=$(size(samples_β, 2))")
     end
-    quantiles_prob =  [0.025, 0.16, 0.5, 0.84, 0.975]
+    quantiles_prob = [0.025, 0.16, 0.5, 0.84, 0.975]
 
     theme = get_theme()
     set_theme!(theme)
@@ -862,11 +862,10 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t
     psd_samples = mapreduce(permutedims, vcat, psd_samples)
 
 
-
     fig = Figure(size = (800, 600))
 
     if plot_f_P
-        psd_quantiles = [[quantile(k,p) for k in eachrow(f .* psd_samples')] for p in quantiles_prob]
+        psd_quantiles = [[quantile(k, p) for k in eachrow(f .* psd_samples')] for p in quantiles_prob]
 
         # psd_quantiles = vquantile!.(Ref(f .* psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
         ax1 = Axis(
@@ -884,7 +883,7 @@ function plot_psd_ppc_CARMA(samples_rα, samples_β, samples_norm, samples_ν, t
         vlines!(ax1, [f_min; f_max], color = :black, linestyle = :dot, label = "Observed window")
     else
         # psd_quantiles = vquantile!.(Ref(psd_samples'), [0.025, 0.16, 0.5, 0.84, 0.975], dims = 2)
-        psd_quantiles = [[quantile(k,p) for k in eachrow(psd_samples')] for p in quantiles_prob]
+        psd_quantiles = [[quantile(k, p) for k in eachrow(psd_samples')] for p in quantiles_prob]
 
 
         ax1 = Axis(
