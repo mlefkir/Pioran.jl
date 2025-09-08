@@ -1,6 +1,13 @@
-"""
-A scalable Gaussian process has a covariance function formed of semi-separable kernels
+@doc raw"""
+    ScalableGP(μ, 𝓡; solver=:celerite)
 
+Scalable Gaussian Process for semi-separable covariance functions.
+
+- `μ` : mean or mean function of the Gaussian Process
+- `𝓡` : covariance function
+- `solver` : indicates which solver to use for the likelihood computation.
+
+A scalable Gaussian process has a covariance function formed of semi-separable kernels
 
 # Example
 ```julia
@@ -14,17 +21,23 @@ f = ScalableGP(μ, 𝓡) # with mean μ
 ```
 See [Foreman-Mackey et al. (2017)](https://ui.adsabs.harvard.edu/abs/2017AJ....154..220F) for more details.
 """
-struct ScalableGP{Typef <: GP{<:AbstractGPs.MeanFunction}, Tk <: SemiSeparable} <: AbstractGPs.AbstractGP
+struct ScalableGP{Typef <: GP{<:AbstractGPs.MeanFunction}, Tk <: SemiSeparable, Tsolv <: Symbol} <: AbstractGPs.AbstractGP
     f::Typef
     kernel::Tk
+    solver::Tsolv
 end
 
 # const FinitePosteriorGP = AbstractGPs.FiniteGP{<:ScalableGP}
 
-ScalableGP(f::GP) = ScalableGP(f, f.kernel)
-ScalableGP(kernel::SemiSeparable) = ScalableGP(GP(0.0, kernel), kernel)
-ScalableGP(mean::Real, kernel::SemiSeparable) = ScalableGP(GP(mean, kernel), kernel)
-ScalableGP(mean::AbstractGPs.MeanFunction, kernel::SemiSeparable) = ScalableGP(GP(mean, kernel), kernel)
+# ScalableGP(f::GP) = ScalableGP(f, f.kernel)
+ScalableGP(f::GP) = ScalableGP(f, f.kernel, :celerite)
+
+ScalableGP(kernel::SemiSeparable) = ScalableGP(GP(0.0, kernel), kernel, :celerite)
+ScalableGP(mean::Real, kernel::SemiSeparable) = ScalableGP(GP(mean, kernel), kernel, :celerite)
+
+ScalableGP(mean::Real, kernel::SemiSeparable, solver::Symbol) = ScalableGP(GP(mean, kernel), kernel, solver)
+
+ScalableGP(mean::AbstractGPs.MeanFunction, kernel::SemiSeparable) = ScalableGP(GP(mean, kernel), kernel, :celerite)
 
 const FiniteScalableGP = AbstractGPs.FiniteGP{<:ScalableGP}
 
@@ -149,5 +162,5 @@ Compute the log-likelihood of the data Y given the GP f.
 function Distributions.logpdf(f::FiniteScalableGP, Y::AbstractVecOrMat{<:Real})
     σ2 = diag(f.Σy)
     y = Y .- mean_vector(f.f.f.mean, f.x)
-    return log_likelihood(f.f.kernel, f.x, y, σ2)
+    return log_likelihood(f.f.kernel, f.x, y, σ2; solver = f.f.solver)
 end

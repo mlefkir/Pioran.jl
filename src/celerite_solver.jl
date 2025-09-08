@@ -169,14 +169,13 @@ More study of this implementation is needed.
 
 """
 @inline function get_values!(
-        a::AbstractVector, b::AbstractVector, c::AbstractVector, d::AbstractVector
-        , zp::AbstractVector, U::AbstractMatrix, V::AbstractMatrix, P::AbstractMatrix, D::AbstractVector, t::AbstractVector
+        a::AbstractVector, b::AbstractVector, c::AbstractVector, d::AbstractVector, zp::AbstractVector, U::AbstractMatrix, V::AbstractMatrix, P::AbstractMatrix, D::AbstractVector, t::AbstractVector
     )
     R, N = size(U)
     T = eltype(U)
     S_n = zeros(T, R, R)
     f = zeros(T, R)
-    return @views  begin
+    return @views begin
         odd = 1:2:R
         even = 2:2:R
         dτ = diff(t)
@@ -197,21 +196,20 @@ More study of this implementation is needed.
             pn1 = P[:, n - 1]
             @turbo @. S_n += D[n - 1] * vn1 * vn1'
             @turbo @. S_n *= pn1 * pn1'
-            buff = S_n * un
-            D[n] -= (un)' * buff
-            V[:, n] -= buff
-            V[:, n] /= D[n]
+            buff = @turbo S_n * un
+            D[n] -= @turbo un' * buff
+            V[:, n] = (V[:, n] - buff) / D[n]
             @turbo @. f += (vn1) * zp[n - 1]
             @turbo @. f *= pn1
-            zp[n] -= (un)' * f
+            zp[n] -= @turbo un' * f
         end
         f = zeros(T, R)
         zp[N] /= D[N]
         @inbounds for n in (N - 1):-1:1
-            @turbo  @. f += (U[:, n + 1]) * zp[n + 1]
-            @turbo @. f *= (P[:, n])
+            @turbo @. f += U[:, n + 1] * zp[n + 1]
+            @turbo @. f *= P[:, n]
             zp[n] /= D[n]
-            zp[n] -= (V[:, n])' * f
+            zp[n] -= @turbo V[:, n]' * f
         end
     end
 end
@@ -234,7 +232,7 @@ end
     suma = sum(a)
 
     D = @turbo @. σ² + suma
-    zp = y[:]
+    zp = copy(y)
 
     get_values!(
         a, b, c, d, zp,
@@ -249,7 +247,7 @@ end
 end
 # COV_EXCL_STOP
 """
-    log_likelihood(cov, τ, y, σ2)
+    log_likelihood(cov, τ, y, σ2; solver = :celerite)
 
 Compute the log-likelihood of a semi-separable covariance function using the celerite algorithm.
 
@@ -258,21 +256,41 @@ Compute the log-likelihood of a semi-separable covariance function using the cel
 - `τ::Vector`: the time points
 - `y::Vector`: the data
 - `σ2::Vector`: the measurement variances
+- `solver::Symbol`: solver to use for the likelihood computation either `:celerite` for the classic celerite solver or `:celerite_matrix` for the solver using matrices algebra.
 
 """
-@inline function log_likelihood(cov::SumOfCelerite, τ, y, σ2)
-    return logl(cov.a, cov.b, cov.c, cov.d, τ, y, σ2)
-    #return compute_nll(τ, y, σ2, cov.cov.a, cov.cov.b, cov.cov.c, cov.cov.d)
+@inline function log_likelihood(cov::SumOfCelerite, τ, y, σ2; solver = :celerite)
+    if solver == :celerite
+        return logl(cov.a, cov.b, cov.c, cov.d, τ, y, σ2)
+    elseif solver == :celerite_matrix
+        return compute_nll(τ, y, σ2, cov.cov.a, cov.cov.b, cov.cov.c, cov.cov.d)
+    else
+        error("solver $solver not recognised, use either :celerite or :celerite_matrix")
+    end
 end
 
-@inline function log_likelihood(cov::CARMA, τ, y, σ2)
+@inline function log_likelihood(cov::CARMA, τ, y, σ2; solver = :celerite)
     a, b, c, d = celerite_coefs(cov)
-    return real(logl(a, b, c, d, τ, y, σ2))
-end
+    if solver == :celerite
+        return real(logl(a, b, c, d, τ, y, σ2))
 
-@inline function log_likelihood(cov::SemiSeparable, τ, y, σ2)
+    elseif solver == :celerite_matrix
+        return compute_nll(τ, y, σ2, a, b, c, d)
+    else
+        error("solver $solver not recognised, use either :celerite or :celerite_matrix")
+    end
+end
+@inline function log_likelihood(cov::SemiSeparable, τ, y, σ2; solver = :celerite)
     a, b, c, d = celerite_coefs(cov)
-    return logl(a, b, c, d, τ, y, σ2)
+
+    if solver == :celerite
+        return real(logl(a, b, c, d, τ, y, σ2))
+
+    elseif solver == :celerite_matrix
+        return compute_nll(τ, y, σ2, a, b, c, d)
+    else
+        error("solver $solver not recognised, use either :celerite or :celerite_matrix")
+    end
 end
 
 """
