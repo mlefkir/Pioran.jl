@@ -4,7 +4,7 @@ Here we only give a brief introduction to Gaussian processes and how we use them
 
 ## Gaussian process regression
 
-A Gaussian process $\boldsymbol{f}$ is formally defined as a collection of random variables, any finite number of which have a joint Gaussian distribution. This process is fully described by its mean function $\mu(t)$ and its covariance function (or kernel) $ \mathcal{R}(t,t')$. The kernel must be a positive-definite function, i.e. the covariance matrix $K$ with elements $K_{ij} = \mathcal{R}(t_i, t_j)$ must be positive-definite.
+A Gaussian process $\boldsymbol{f}$ is formally defined as a collection of random variables, any finite number of which have a joint Gaussian distribution. This process is fully described by its mean function $\mu(t)$ and its covariance function (or kernel) $\mathcal{R}(t,t')$. The kernel must be a positive-definite function, i.e. the covariance matrix $K$ with elements $K_{ij} = \mathcal{R}(t_i, t_j)$ must be positive-definite.
 
 #### Likelihood function
 

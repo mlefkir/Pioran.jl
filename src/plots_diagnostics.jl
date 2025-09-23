@@ -241,13 +241,21 @@ end
 
 
 """
-	run_posterior_predict_checks(samples, paramnames, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, is_integrated_power = true, plots = "all", n_samples = 100, path = "", basis_function = "SHO", n_frequencies = 1000, plot_f_P = false, n_components = 20)
+	run_posterior_predict_checks(samples, paramnames, paramnames_split, t, y, yerr, model, with_log_transform; S_low = 20, S_high = 20, is_integrated_power = true, plots = "all", n_samples = 100, path = "", basis_function = "SHO", n_frequencies = 1000, plot_f_P = false, n_components = 20)
 
 Run the posterior predictive checks for the model and the approximation of the PSD
 
 # Arguments
 - `samples::Array{Float64, 2}` : The samples from the posterior distribution
 - `paramnames::Array{String, 1}` : The names of the parameters
+- `paramnames_split::Dict` : Dictionary to map the name of the parameters to the components for instance:
+                   Dict(
+                            "psd" => ["α₁", "f₁", "α₂"],
+                            "norm" => "variance",
+                            "scale_err" => "ν",
+                            "log_transform" => "c",
+                            "mean" => "μ"
+                        )
 - `t::Array{Float64, 1}` : The time series
 - `y::Array{Float64, 1}` : The values of the time series
 - `yerr::Array{Float64, 1}` : The errors of the time series
@@ -263,6 +271,7 @@ Run the posterior predictive checks for the model and the approximation of the P
 - `n_frequencies::Int=1000` : The number of frequencies to use for the approximation of the PSD
 - `plot_f_P::Bool=false` : If true, the plots are made in terms of f * PSD
 - `n_components::Int=20` : The number of components to use for the approximation of the PSD
+- `save_samples::Bool=false` : Whether to save samples of the PSD, this can create a very large file
 """
 function run_posterior_predict_checks(samples, paramnames, paramnames_split, t, y, yerr, model, GP_model, with_log_transform; S_low = 20, S_high = 20, is_integrated_power = true, plots = "all", n_samples = 100, path = "", basis_function = "SHO", n_frequencies = 1000, plot_f_P = false, n_components = 20, save_samples = false)
     println("Running posterior predictive checks...")
@@ -394,10 +403,10 @@ function plot_psd_ppc(samples_𝓟, samples_norm, samples_ν, t, y, yerr, model;
 
     amplitudes = [Pioran.get_approx_coefficients.(Ref(model(samples_𝓟[k, :]...)), f0, fM, basis_function = basis_function, n_components = n_components) for k in 1:P]
 
-    norm = [Pioran.get_norm_psd(amplitudes[k], spectral_points, f_min, f_max, basis_function, is_integrated_power) for k in 1:P]
+    integ = [Pioran.get_norm_psd(amplitudes[k], spectral_points, f_min, f_max, basis_function, is_integrated_power) for k in 1:P]
 
-    psd_m = psd ./ norm'
-    psd_approx_m = psd_approx ./ norm'
+    psd_m = psd ./ integ'
+    psd_approx_m = psd_approx ./ integ'
     if save_samples
         open(path * "psd_ppc_samples.txt"; write = true) do fil
             write(fil, "# Posterior predictive power spectral density samples\n# f, psd, psd_approx\n")
