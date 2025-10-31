@@ -15,9 +15,9 @@ Only QPO is implemented
 function convert_feature(psd_feature::PowerSpectralDensity)
     if psd_feature isa QPO
         Δ = sqrt(4 * psd_feature.Q^2 - 1)
-        ω₀ = 2π * psd_feature.f₀
+        ω₀ = 2π* psd_feature.f₀
 
-        a = psd_feature.S₀ * ω₀ * psd_feature.Q / (√2 * π)
+        a = psd_feature.S₀ * ω₀ * psd_feature.Q /4 # without this factor of 4 the normalisation of a single component is wrong! And I don't know why...
         b = a / Δ
         c = ω₀ / psd_feature.Q / 2
         d = c * Δ
@@ -221,7 +221,7 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
     # get the psd of the continuum
     psd_continuum, psd_features = separate_psd(psd_model)
 
-    @assert !isnothing(psd_continuum) "The PSD model should contain at least one BendingPowerLaw component to be approximated"
+    @assert !isnothing(psd_continuum) "The PSD model should contain at least one ContinuumPowerSpectrum component to be approximated"
 
     psd_normalised, psd_norm = get_normalised_psd(psd_continuum, spectral_points)
     amplitudes = psd_decomp(psd_normalised, spectral_matrix)
@@ -329,8 +329,8 @@ end
 Computes the integral of the Celerite power spectrum:
 """
 function integral_celerite(a, b, c, d, x)
-    num = c .^ 2 + d .^ 2 + 2d * x + x^2
-    den = c .^ 2 + d .^ 2 - 2d * x + x^2
+    num = c .^ 2 + (d .+x).^2
+    den = c .^ 2 + (d .-x) .^2
     return (2a * (atan.(c, d - x) - atan.(c, d + x)) .+ b .* log.(num ./ den)) / 4
 end
 
@@ -355,7 +355,7 @@ end
 Computes the integral of a celerite power spectral density with coefficients (a,b,c,d) between x₁ and x₂.
 """
 function integrate_psd_feature(a, b, c, d, x₁, x₂)
-    return integral_celerite(a, b, c, d, x₂) - integral_celerite(a, b, c, d, x₁)
+    return (integral_celerite(a, b, c, d, x₂) - integral_celerite(a, b, c, d, x₁)) /4
 end
 
 @doc raw"""
@@ -380,7 +380,7 @@ function get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function,
         if !isnothing(cov_features)
             for coeffs in eachcol(cov_features)
                 a, b, c, d = coeffs
-                feature_integ = integrate_psd_feature(a, b, c, d, 2π * f_min, 2π * f_max) / 2π
+                feature_integ = integrate_psd_feature(a, b, c, d, f_min, f_max)/4*(sqrt(2/pi))
                 integ += feature_integ
             end
         end

@@ -47,7 +47,7 @@ function Celerite_psd(f, a, b, c, d)
     ω = 2π * f
     num = (a * c + b * d) * (c^2 + d^2) .+ (a * c - b * d) * ω .^ 2
     den = ω .^ 4 + 2 * (c^2 - d^2) * ω .^ 2 .+ (c^2 + d^2)^2
-    return num ./ den
+    return num ./ den *4   # this factor of 4 is needed as we work in absolute frequencies (i.e. not angular frequencies!), it comes from: √(2/π) *2√(2π), the first √(2/π)  is from the angular frequency Fourier transform (eq 9 of Foreman-Mackey+2017) and  √(2π) is to cancel the 1/√2π of the FT, the factor of 2 is needed to account for the one-sided integral!
 end
 
 """ evaluate(f, C::Celerite)

@@ -27,21 +27,19 @@ KernelFunctions.metric(R::Exp) = KernelFunctions.Euclidean()
 KernelFunctions.ScaledKernel(R::Exp, number::Real = 1.0) = Exp(number * R.A, R.α)
 
 function celerite_coefs(covariance::Exp)
-    a = covariance.A
+    a = covariance.A/2 # divide by two to ensure that the variance of the process is the integral from 0 to infinity, otherwise when we simulate timeseries, we get a sample variance that is twice the value of a.
     c = covariance.α
     return [a, 0.0, c, 0.0]
 end
 
 
 function Exp_covariance(τ, A, α)
-    return A * exp.(-α .* τ)
+    return A/2 * exp.(-α .* τ)
 end
 
 
-### There is still is a discrepancy between the PSD of EXP and Celerite!!!
-### I need to fix this
 function Exp_psd(f, A, α)
-    return A * 2 * α ./ (α^2 .+ 4π^2 * f .^ 2)
+    return 2A * α ./ (α^2 .+ 4π^2 * f .^ 2) # factor 2 IS NEEDED because of simulations! See celerite_coefs function
 end
 
 """ evaluate(R::Exp, f)
