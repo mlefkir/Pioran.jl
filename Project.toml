@@ -40,7 +40,7 @@ Polynomials = "4"
 ProgressMeter = "1"
 StatsBase = "0.34"
 StructArrays = "^0.7"
-Tonari = "0.2.0"
+Tonari = "0.2.1"
 julia = "1"
 
 [extras]
