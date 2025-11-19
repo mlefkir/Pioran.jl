@@ -5,7 +5,7 @@ function test_exp_covariance()
     e = Exp(1.0, α)
     e(0.0, 0.0) ≈ 1.0
     t = collect(range(0, stop = 10, length = 500))
-    return @test e.(t, 0.0) ≈ exp.(-t * α)/2
+    return @test e.(t, 0.0) ≈ exp.(-t * α) / 2
 end
 
 function test_cel_covariance()
@@ -43,7 +43,7 @@ end
 
 function test_Exp_celerite_coef()
     e = Exp(2.3, 0.2)
-    return @test Pioran.celerite_coefs(e) == [2.3/2, 0.0, 0.2, 0.0]
+    return @test Pioran.celerite_coefs(e) == [2.3 / 2, 0.0, 0.2, 0.0]
 end
 
 function test_integral_celerite()

@@ -82,7 +82,7 @@ function test_celerite_repr()
     𝓒 = CARMA(3, 2, rα, β, 1.3)
     C = Pioran.celerite_repr(𝓒)
 
-    @test C isa Pioran.SumOfSemiSeparable
+    @test C isa Pioran.SumOfCelerite
 
     a, b, c, d = C.a, C.b, C.c, C.d
     a_, b_, c_, d_ = [1.332733901854476, -0.03273390185447589], [-0.026820976815752837, 0.0], [0.042163209825323775, 0.7599101571312047], [-1.1115603157767922, 0.0]
@@ -124,12 +124,19 @@ function test_CARMA_PSD()
         11.38193903188344,
         1,
     ]
-    𝓒 = CARMA(3, 2, rα, β, 1.0)
+    𝓒 = CARMA(3, 2, rα, β, 1.0, false)
 
     a, b, c, d = Pioran.celerite_coefs(𝓒)
 
-    psd_cel = sum([Pioran.Celerite_psd.(f, Ref(a[i]), Ref(b[i]), Ref(c[i]), Ref(d[i])) for i in 1:length(a)])/2
-    psd_carma = Pioran.evaluate(𝓒, f) / Pioran.CARMA_normalisation(𝓒)
+    psd_cel = sum([Pioran.Celerite_psd.(f, Ref(a[i]), Ref(b[i]), Ref(c[i]), Ref(d[i])) for i in 1:length(a)])
+    psd_carma = Pioran.evaluate(𝓒, f)
+    @test psd_cel ≈ psd_carma
+
+    𝓒 = CARMA(3, 2, rα, β, 1.0, true)
+    a, b, c, d = Pioran.celerite_coefs(𝓒)
+
+    psd_cel = sum([Pioran.Celerite_psd.(f, Ref(a[i]), Ref(b[i]), Ref(c[i]), Ref(d[i])) for i in 1:length(a)])
+    psd_carma = Pioran.evaluate(𝓒, f)
     return @test psd_cel ≈ psd_carma
 end
 
