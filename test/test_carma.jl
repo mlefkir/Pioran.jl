@@ -127,7 +127,8 @@ function test_CARMA_PSD()
     𝓒 = CARMA(3, 2, rα, β, 1.0)
 
     a, b, c, d = Pioran.celerite_coefs(𝓒)
-    psd_cel = 2 * sum([Pioran.Celerite_psd.(f, Ref(a[i]), Ref(b[i]), Ref(c[i]), Ref(d[i])) for i in 1:length(a)])
+
+    psd_cel = sum([Pioran.Celerite_psd.(f, Ref(a[i]), Ref(b[i]), Ref(c[i]), Ref(d[i])) for i in 1:length(a)])/2
     psd_carma = Pioran.evaluate(𝓒, f) / Pioran.CARMA_normalisation(𝓒)
     return @test psd_cel ≈ psd_carma
 end

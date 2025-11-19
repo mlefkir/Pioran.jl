@@ -5,7 +5,7 @@ function test_exp_covariance()
     e = Exp(1.0, α)
     e(0.0, 0.0) ≈ 1.0
     t = collect(range(0, stop = 10, length = 500))
-    return @test e.(t, 0.0) ≈ exp.(-t * α)
+    return @test e.(t, 0.0) ≈ exp.(-t * α)/2
 end
 
 function test_cel_covariance()
@@ -43,16 +43,15 @@ end
 
 function test_Exp_celerite_coef()
     e = Exp(2.3, 0.2)
-    return @test Pioran.celerite_coefs(e) == [2.3, 0.0, 0.2, 0.0]
+    return @test Pioran.celerite_coefs(e) == [2.3/2, 0.0, 0.2, 0.0]
 end
 
 function test_integral_celerite()
     a, b, c, d = [3.3, 0.2, 0.3, 2.2]
     x1, x2 = 1.0e-2, 1.0e1
-    integ_num = quadgk(x -> Pioran.Celerite_psd(x, a, b, c, d), x1, x2, rtol = 1.0e-10)[1] * 2π
-    integ_ana = Pioran.integral_celerite(a, b, c, d, 2π * x2) - Pioran.integral_celerite(a, b, c, d, 2π * x1)
+    integ_num = quadgk(x -> Pioran.Celerite_psd(x, a, b, c, d), x1, x2, rtol = 1.0e-10)[1]
+    integ_ana = Pioran.integral_celerite(a, b, c, d, x2) - Pioran.integral_celerite(a, b, c, d, x1)
     return @test integ_num ≈ integ_ana
-
 end
 
 @testset "test_covariance_functions" begin

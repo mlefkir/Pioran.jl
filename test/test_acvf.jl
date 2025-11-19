@@ -20,7 +20,7 @@ function test_sum_covariance_celerite_coeff()
     e1 = Exp(1.0, 0.34)
     e2 = Exp(2.4, 0.21)
     e = 12.5 * (e1 + e2)
-    return @test Pioran.celerite_coefs(e) == ([12.5, 30.0], [0.0, 0.0], [0.34, 0.21], [0.0, 0.0])
+    return @test Pioran.celerite_coefs(e) == ([12.5/2, 30.0/2], [0.0, 0.0], [0.34, 0.21], [0.0, 0.0])
 end
 
 function test_large_sum_covariance()
@@ -29,7 +29,7 @@ function test_large_sum_covariance()
     e2 = Exp(2.4, 0.21)
     c2 = Celerite(3.3, 1.2, 3.3, 2.13)
     e = e1 + c1 + e2 + c2
-    return @test Pioran.celerite_coefs(e) == ([1.0, 1.3, 2.4, 3.3], [0.0, 4.2, 0.0, 1.2], [0.34, 1.3, 0.21, 3.3], [0.0, 5.2, 0.0, 2.13])
+    return @test Pioran.celerite_coefs(e) == ([1.0/2, 1.3, 2.4/2, 3.3], [0.0, 4.2, 0.0, 1.2], [0.34, 1.3, 0.21, 3.3], [0.0, 5.2, 0.0, 2.13])
 end
 
 function test_sumofCelerite()

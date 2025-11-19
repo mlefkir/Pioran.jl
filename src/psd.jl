@@ -15,9 +15,8 @@ Only QPO is implemented
 function convert_feature(psd_feature::PowerSpectralDensity)
     if psd_feature isa QPO
         Δ = sqrt(4 * psd_feature.Q^2 - 1)
-        ω₀ = 2π* psd_feature.f₀
-
-        a = psd_feature.S₀ * ω₀ * psd_feature.Q /4 # without this factor of 4 the normalisation of a single component is wrong! And I don't know why...
+        ω₀ = 2π * psd_feature.f₀
+        a = psd_feature.S₀ * ω₀ * psd_feature.Q / 4 # without this factor of 4 the normalisation of a single component is wrong! And I don't know why...
         b = a / Δ
         c = ω₀ / psd_feature.Q / 2
         d = c * Δ
@@ -253,8 +252,8 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
             covariance = SumOfCelerite(a, a, c, c)
         else
             covariance = SumOfCelerite(
-                [a; cov_features[1, :]],
-                [a; cov_features[2, :]],
+                [a; 2 * cov_features[1, :]],
+                [a; 2 * cov_features[2, :]],
                 [c; cov_features[3, :]],
                 [c; cov_features[4, :]]
             )
@@ -276,8 +275,8 @@ function approx(psd_model::PowerSpectralDensity, f_min::Real, f_max::Real, n_com
             covariance = SumOfCelerite(aa, bb, cc, dd)
         else
             covariance = SumOfCelerite(
-                [aa; cov_features[1, :]],
-                [bb; cov_features[2, :]],
+                [aa; 2 * cov_features[1, :]],
+                [bb; 2 * cov_features[2, :]],
                 [cc; cov_features[3, :]],
                 [dd; cov_features[4, :]]
             )
@@ -329,9 +328,9 @@ end
 Computes the integral of the Celerite power spectrum:
 """
 function integral_celerite(a, b, c, d, x)
-    num = c .^ 2 + (d .+x).^2
-    den = c .^ 2 + (d .-x) .^2
-    return (2a * (atan.(c, d - x) - atan.(c, d + x)) .+ b .* log.(num ./ den)) / 4
+    num = c .^ 2 + (d .+ 2π * x) .^ 2
+    den = c .^ 2 + (d .- 2π * x) .^ 2
+    return (2a * (atan.(c, d - 2π * x) - atan.(c, d + 2π * x)) .+ b .* log.(num ./ den)) / 2π
 end
 
 @doc raw"""
@@ -355,7 +354,7 @@ end
 Computes the integral of a celerite power spectral density with coefficients (a,b,c,d) between x₁ and x₂.
 """
 function integrate_psd_feature(a, b, c, d, x₁, x₂)
-    return (integral_celerite(a, b, c, d, x₂) - integral_celerite(a, b, c, d, x₁)) /4
+    return (integral_celerite(a, b, c, d, x₂) - integral_celerite(a, b, c, d, x₁))
 end
 
 @doc raw"""
@@ -380,7 +379,7 @@ function get_norm_psd(amplitudes, spectral_points, f_min, f_max, basis_function,
         if !isnothing(cov_features)
             for coeffs in eachcol(cov_features)
                 a, b, c, d = coeffs
-                feature_integ = integrate_psd_feature(a, b, c, d, f_min, f_max)/4*(sqrt(2/pi))
+                feature_integ = integrate_psd_feature(a, b, c, d, f_min, f_max)
                 integ += feature_integ
             end
         end
