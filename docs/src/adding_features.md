@@ -29,11 +29,14 @@ We now simulate time series from this process. To do so we will use the GP metho
 ```@example psd_features
 t = range(0.,1e3,step=0.1)
 yerr = 0.3*ones(length(t));
+using QuadGK
 ```
 
 ```@example psd_features
-f_min,f_max = 1e-3,1e2
-𝓡 = approx(𝓟, f_min, f_max, 35, 1., basis_function="SHO")
+f_min,f_max = 1/t[end],1/2/diff(t)[1]
+norm = quadgk(x->𝓟(x),f_min,f_max,rtol=1e-14)[1]/2
+
+𝓡 = approx(𝓟, f_min, f_max, 35, norm, basis_function="DRWCelerite")
 GP = ScalableGP(0.0, 𝓡)
 GPc = GP(t,yerr.^2)
 ```
@@ -80,6 +83,6 @@ noise_level_TK = 2Δt*mean(yerr_TK.^2)
 
 Plots.plot(fP,I,yscale=:log10,xscale=:log10,xlabel="Frequency (Hz)",ylabel="Power",framestyle=:box,label="Periodogram GP",alpha=1,lw=.5)
 Plots.plot!(fP_TK,I_TK,label="Periodogram TK",alpha=0.2)
-Plots.plot!(f,𝓟.(f)/2,label="Model",linewidth=2)
+Plots.plot!(f,𝓟.(f),label="Model",linewidth=2)
 hline!([noise_level],label="Noise level",linewidth=2,linestyle=:dash,ylim=(noise_level/4,2e2),)
 ```
