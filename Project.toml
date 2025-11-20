@@ -1,6 +1,6 @@
 name = "Pioran"
 uuid = "58cf54c2-5899-443a-99a6-60958a74ec4a"
-version = "1.1.0"
+version = "1.2.0"
 authors = ["Mehdy Lefkir"]
 
 [deps]
