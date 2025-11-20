@@ -1,5 +1,5 @@
 @doc raw"""
-	CARMA(p, q, rα, β, σ²)
+	CARMA(p, q, rα, β, norm, is_integrated_power=true)
 
 Continuous-time AutoRegressive Moving Average (CARMA) model for the power spectral density
 
@@ -7,7 +7,8 @@ Continuous-time AutoRegressive Moving Average (CARMA) model for the power spectr
 - `q`: the order of the moving average polynomial
 - `rα`: roots of the autoregressive polynomial length p+1
 - `β`: the moving average coefficients length q+1
-- `σ²`: the variance of the process
+- `norm`: the normalisation of the process
+- `is_integrated_power`: `true` if `norm` corresponds to the integral of the power spectrum between two frequencies (i.e. something like the sample variance). `false` if `norm` corresponds to the variance of the process, i.e. the integral of the PSD from 0 to infinity.
 
 The power spectral density of the CARMA model is given by:
 ```math
@@ -20,9 +21,10 @@ struct CARMA{Tp <: Int64, Trα <: Complex, Tβ <: Real, T <: Real} <: SemiSepara
     q::Tp
     rα::Vector{Trα} # roots of AR polynomial length p
     β::Vector{Tβ} # moving average coefficients length q+1
-    σ²::T
+    norm::T
+    is_integrated_power::Bool
 
-    function CARMA(p::Tp, q::Tp, rα::Vector{Trα}, β::Vector{Tβ}, σ²::T) where {Tp <: Int64, Trα <: Complex, Tβ <: Real, T <: Real}
+    function CARMA(p::Tp, q::Tp, rα::Vector{Trα}, β::Vector{Tβ}, norm::T, is_integrated_power::Bool = true) where {Tp <: Int64, Trα <: Complex, Tβ <: Real, T <: Real}
         if p < 1 || q < 0
             throw(ArgumentError("The order of the autoregressive and moving average polynomials must be positive"))
         elseif q > p
@@ -32,16 +34,18 @@ struct CARMA{Tp <: Int64, Trα <: Complex, Tβ <: Real, T <: Real} <: SemiSepara
         elseif length(β) != q + 1
             throw(ArgumentError("The length of the moving average coefficients must be equal to q + 1"))
         end
-        return new{Tp, Trα, Tβ, T}(p, q, rα, β, σ²)
+        return new{Tp, Trα, Tβ, T}(p, q, rα, β, norm, is_integrated_power)
     end
-
 end
-CARMA(p::Int64, q::Int64, rα, β) = CARMA(p, q, rα, β, 1.0)
+
+CARMA(p::Int64, q::Int64, rα, β) = CARMA(p, q, rα, β, 1.0, true)
+CARMA(p::Int64, q::Int64, rα, β, is_integrated_power::Bool) = CARMA(p, q, rα, β, 1.0, is_integrated_power)
+
 
 # Define the kernel functions for the CARMA model
 KernelFunctions.kappa(R::CARMA, τ::Real) = CARMA_covariance(τ, R)
 KernelFunctions.metric(R::CARMA) = KernelFunctions.Euclidean()
-KernelFunctions.ScaledKernel(R::CARMA, number::Real = 1.0) = CARMA(R.p, R.q, R.rα, R.β, R.σ² * number)
+KernelFunctions.ScaledKernel(R::CARMA, number::Real = 1.0) = CARMA(R.p, R.q, R.rα, R.β, R.norm * number)
 
 """
 	celerite_repr(cov::CARMA)
@@ -51,19 +55,16 @@ Convert a CARMA model to a Celerite model.
 """
 function celerite_repr(cov::CARMA)
     a, b, c, d = celerite_coefs(cov)
-    J = length(a)
-
-    𝓡 = Celerite(a[1], b[1], c[1], d[1])
 
     if cov.p % 2 == 0
-        for i in 2:J
-            𝓡 += Celerite(a[i], b[i], c[i], d[i])
-        end
+        𝓡 = SumOfCelerite(a, b, c, d)
     else
-        for i in 2:(J - 1)
-            𝓡 += Celerite(a[i], b[i], c[i], d[i])
-        end
-        𝓡 += Exp(a[end], c[end])
+        𝓡 = SumOfCelerite(
+            [a[1:(end - 1)]; a[end]],
+            [b[1:(end - 1)]; 0],
+            [c[1:(end - 1)]; c[end]],
+            [d[1:(end - 1)]; 0]
+        )
     end
 
     return 𝓡
@@ -71,11 +72,11 @@ end
 
 
 function celerite_coefs(covariance::CARMA)
-    return CARMA_celerite_coefs(covariance.p, covariance.rα, covariance.β, covariance.σ²)
+    return CARMA_celerite_coefs(covariance.p, covariance.rα, covariance.β, covariance.norm, covariance.is_integrated_power)
 end
 
 @doc raw"""
-	CARMA_celerite_coefs(p, rα, β, σ²)
+	CARMA_celerite_coefs(p, rα, β, norm,is_integrated_power)
 
 Convert the CARMA coefficients to Celerite coefficients.
 
@@ -91,9 +92,10 @@ This means that for an odd order autoregressive polynomial p, the last root is r
 - `p::Int`: the order of the autoregressive polynomial
 - `rα::Vector{Complex}`: roots of the autoregressive polynomial
 - `β::Vector{Real}`: moving average coefficients
-- `σ²::Real`: the variance of the process
+- `norm::Real`: the 'variance' of the process
+- `is_integrated_power::Bool`: See CARMA type
 """
-function CARMA_celerite_coefs(p::Int64, rα::Vector{Trα}, β::Vector{Tβ}, σ²::Tb) where {Trα <: Complex, Tβ <: Real, Tb <: Real}
+function CARMA_celerite_coefs(p::Int64, rα::Vector{Trα}, β::Vector{Tβ}, norm::Tb, is_integrated_power::Bool) where {Trα <: Complex, Tβ <: Real, Tb <: Real}
 
     T = eltype(β)
     # check if the last root is real
@@ -132,8 +134,12 @@ function CARMA_celerite_coefs(p::Int64, rα::Vector{Trα}, β::Vector{Tβ}, σ²
         end
     end
     variance = sum(a)
-    va = σ² / variance
-    return a .* va, b .* va, c, d
+    va = norm
+    # if integrated power renormalise by the integral from 0 to infinity
+    if is_integrated_power
+        va /= variance
+    end
+    return a .* va, b .* va, c, d # the amplitudes are divided by 4
 end
 
 """
@@ -158,8 +164,11 @@ function evaluate(model::CARMA, f)
     for j in 1:(p + 1)
         den += α[j] * ωi .^ (j - 1)
     end
+    if model.is_integrated_power
+        return 2 * abs.(num ./ den) .^ 2 * model.norm / CARMA_normalisation(model)
 
-    return abs.(num ./ den) .^ 2 * model.σ²
+    end
+    return 4 * abs.(num ./ den) .^ 2 * model.norm
 end
 
 @doc raw"""
@@ -254,7 +263,11 @@ function CARMA_covariance(τ, covariance::CARMA)
         R += num .* exp.(rₖ .* abs.(τ)) / den
         variance += num / den
     end
-    return real.(R) ./ real(variance) * covariance.σ²
+    Cov = real.(R) * covariance.norm
+    if covariance.is_integrated_power
+        Cov /= 2real(variance)
+    end
+    return 2Cov
 end
 
 """
@@ -263,28 +276,33 @@ end
 Compute the normalisation constant of the CARMA model.
 
 """
-function CARMA_normalisation(covariance::CARMA)
+function CARMA_normalisation(rα, β)
     variance = 0.0
 
     # compute the remaining terms
-    for rₖ in covariance.rα
+    for rₖ in rα
         num_1, num_2 = 0, 0
-        for (l, βₗ) in enumerate(covariance.β)
+        for (l, βₗ) in enumerate(β)
             num_1 += βₗ * rₖ^(l - 1)
             num_2 += βₗ * (-rₖ)^(l - 1)
         end
         num = num_1 * num_2
 
         den = -2 * real(rₖ)
-        r_ = filter(x -> x != rₖ, covariance.rα)
+        r_ = filter(x -> x != rₖ, rα)
         for rⱼ in r_
             den *= (rⱼ - rₖ) * (conj(rⱼ) + rₖ)
         end
 
         variance += num / den
     end
-    return real(variance)
+    return real(variance) # factor 2 for the
 end
+
+function CARMA_normalisation(covariance::CARMA)
+    return CARMA_normalisation(covariance.rα, covariance.β)
+end
+
 
 @doc raw"""
 	sample_quad(p::Int64, q::Int64, rng::AbstractRNG, f_min::Float64, f_max::Float64)

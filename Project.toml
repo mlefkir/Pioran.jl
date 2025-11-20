@@ -1,11 +1,10 @@
 name = "Pioran"
 uuid = "58cf54c2-5899-443a-99a6-60958a74ec4a"
-authors = ["Mehdy Lefkir"]
 version = "1.1.0"
+authors = ["Mehdy Lefkir"]
 
 [deps]
 AbstractGPs = "99985d1d-32ba-4be9-9821-2ec096f28918"
-ArviZ = "131c737c-5715-5e2e-ad31-c244f01c1dc7"
 Bijectors = "76274a88-744f-5084-9051-94815aaf08c4"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
@@ -28,21 +27,23 @@ BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 [compat]
 AbstractGPs = "0.5"
 Aqua = "0.8"
-ArviZ = "0.12.2"
 BenchmarkTools = "1"
 Bijectors = "~0.15.6"
-CairoMakie = "0.11, 0.12, 0.13"
+CairoMakie = "^0.15"
+Coverage = "1.8.1"
 DelimitedFiles = "1"
 Distributions = "^0.25"
-ForwardDiff = "0.10"
+ForwardDiff = "1"
 KernelFunctions = "0.10"
 LombScargle = "1"
 LoopVectorization = "0.12.171"
 Polynomials = "4"
 ProgressMeter = "1"
+QuadGK = "2.11.2"
+Statistics = "1.11.1"
 StatsBase = "0.34"
-StructArrays = "0.6.21"
-Tonari = "0.2.0"
+StructArrays = "0.7"
+Tonari = "^0.2"
 julia = "1"
 
 [extras]
