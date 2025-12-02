@@ -72,6 +72,18 @@ MPI.Init()
     conda install -c conda-forge h5py=*=mpi_openmpi*
     ```
 
+!!! note "Issues with HDF5_jll failling to compile"
+    Recent versions of OpenMPI_jll (v5) make the precompilation of HDF5_jll fail, as noted in
+    https://github.com/trixi-framework/libtrixi/issues/237
+
+    To fix this we can install a specific version of OpenMPI and freeze its version using the `pin` function (see the Julia documentation https://pkgdocs.julialang.org/v1/managing-packages/#Pinning-a-package )
+
+    ```julia
+    using Pkg
+    Pkg.add(name="OpenMPI_jll", version="4.1.8")
+    Pkg.pin(name="OpenMPI_jll")
+    ```
+
 ## Modelling with ultranest
 
 We assume the reader is familiar with nested sampling and the `ultranest` package.
